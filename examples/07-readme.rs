@@ -1,4 +1,3 @@
-
 use enumerable::Enumerable;
 
 #[derive(Debug, Copy, Clone, Enumerable)]

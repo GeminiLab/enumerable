@@ -11,7 +11,10 @@ fn test_bool() {
 
 #[test]
 fn test_option_bool() {
-    assert_eq!(collect_all::<Option<bool>>(), vec![None, Some(false), Some(true)]);
+    assert_eq!(
+        collect_all::<Option<bool>>(),
+        vec![None, Some(false), Some(true)]
+    );
 }
 
 #[test]

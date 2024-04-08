@@ -135,7 +135,7 @@ impl Enumerable for bool {
     }
 }
 
-/// `OptionEnumerator` is a iterator over possible values of `Option<T>`.
+/// `OptionEnumerator` is an iterator over possible values of `Option<T>`.
 /// It yields `None` first, then yields `Some(item)` for each possible value of `T`.
 pub struct OptionEnumerator<T: Enumerable> {
     first: bool,
@@ -189,7 +189,7 @@ where
     }
 }
 
-/// `ResultEnumerator` is a iterator over possible values of `Result<T, E>`.
+/// `ResultEnumerator` is an iterator over possible values of `Result<T, E>`.
 pub struct ResultEnumerator<T: Enumerable, E: Enumerable> {
     over_results: bool,
     results: <T as Enumerable>::Enumerator,
