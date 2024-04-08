@@ -1,5 +1,6 @@
 [package]
 name = "enumerable_derive"
+description = "A proc-macro helping you to enumerate all possible values of a enum or struct"
 authors.workspace = true
 license.workspace = true
 edition.workspace = true
