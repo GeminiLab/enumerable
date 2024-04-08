@@ -5,12 +5,11 @@ version = "0.1.0-dev"
 edition = "2021"
 authors = [ "aarkegz <aarkegz@gmail.com>" ]
 license = "MIT"
-license-file = "LICENSE"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-enumerable_derive = { path = "enumerable_derive" }
+enumerable_derive = { path = "./enumerable_derive", version = "=0.1.0-dev" }
 
 [workspace]
 members = ["enumerable_derive"]
