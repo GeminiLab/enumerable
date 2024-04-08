@@ -251,3 +251,7 @@ where
 }
 
 pub use enumerable_derive::*;
+
+#[cfg(test)]
+#[path = "test.rs"]
+mod test;
