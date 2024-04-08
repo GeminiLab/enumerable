@@ -15,6 +15,7 @@ enum FieldB {
 }
 
 #[derive(Copy, Clone, Enumerable, Debug)]
+#[allow(dead_code)]
 struct Struct {
     a: FieldA,
     b: FieldB,

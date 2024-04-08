@@ -14,6 +14,7 @@ enum EnumB {
 }
 
 #[derive(Copy, Clone, Enumerable, Debug)]
+#[allow(dead_code)]
 struct Struct {
     a: EnumA,
     flag: bool,
