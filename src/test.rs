@@ -31,6 +31,23 @@ fn test_u8_i8() {
     assert_eq!(collect_all::<i8>(), (i8::MIN..=i8::MAX).collect::<Vec<_>>());
 }
 
+#[test]
+fn test_char() {
+    assert_eq!(char::enumerator().skip(0x61).next(), Some('\u{61}'));
+    assert_ne!(char::enumerator().skip(0xF987).next(), Some('\u{F987}'));
+    assert_eq!(
+        char::enumerator().skip(0xF987 - 0x800).next(),
+        Some('\u{F987}')
+    );
+}
+
+#[test]
+fn test_unit() {
+    let mut iter = <() as Enumerable>::enumerator();
+    assert_eq!(iter.next(), Some(()));
+    assert_eq!(iter.next(), None);
+}
+
 #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Enumerable)]
 enum TestEnum3 {
     A,

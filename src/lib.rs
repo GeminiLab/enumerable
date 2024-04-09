@@ -135,6 +135,43 @@ impl Enumerable for bool {
     }
 }
 
+/// This is an implementation of the `Enumerable` trait for `char`.
+impl Enumerable for char {
+    type Enumerator =
+        std::iter::Chain<std::ops::RangeInclusive<char>, std::ops::RangeInclusive<char>>;
+
+    /// This method returns an iterator over all possible values of `char`, which is `U+0000` to
+    /// `U+10FFFF`, excluding the surrogate code points.
+    ///
+    /// ## Example
+    /// ```
+    /// use enumerable::Enumerable;
+    ///
+    /// assert_eq!(char::enumerator().skip(0x41).next(), Some('\u{41}'));
+    /// ```
+    fn enumerator() -> Self::Enumerator {
+        ('\u{0}'..='\u{D7FF}').chain('\u{E000}'..='\u{10FFFF}')
+    }
+}
+
+/// This is an implementation of the `Enumerable` trait for `()`.
+impl Enumerable for () {
+    type Enumerator = std::iter::Once<()>;
+
+    /// This method returns an iterator over all possible values of `()`.
+    ///
+    /// ## Example
+    ///
+    /// ```rust
+    /// let mut iter = <() as enumerable::Enumerable>::enumerator();
+    /// assert_eq!(iter.next(), Some(()));
+    /// assert_eq!(iter.next(), None);
+    /// ```
+    fn enumerator() -> Self::Enumerator {
+        std::iter::once(())
+    }
+}
+
 /// `OptionEnumerator` is an iterator over possible values of `Option<T>`.
 /// It yields `None` first, then yields `Some(item)` for each possible value of `T`.
 pub struct OptionEnumerator<T: Enumerable> {
