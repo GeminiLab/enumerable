@@ -5,7 +5,8 @@ members = ["enumerable_derive"]
 authors = [ "aarkegz <aarkegz@gmail.com>" ]
 license = "MIT"
 edition = "2021"
-version = "0.1.0"
+version = "0.2.0-dev"
+repository = "https://github.com/GeminiLab/enumerable/"
 include = [
     "README.md",
     "LICENSE",
@@ -21,9 +22,10 @@ authors.workspace = true
 license.workspace = true
 edition.workspace = true
 version.workspace = true
+repository.workspace = true
 include.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-enumerable_derive = { path = "enumerable_derive", version = "=0.1.0" }
+enumerable_derive = { path = "enumerable_derive", version = "=0.2.0-dev" }
