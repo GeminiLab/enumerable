@@ -9,6 +9,7 @@ enum Food {
 }
 
 #[derive(Debug, Copy, Clone, Enumerable)]
+#[allow(dead_code)]
 struct Meal {
     alice_eats: Food,
     bob_eats: Option<Food>,
