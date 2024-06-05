@@ -1,11 +1,12 @@
 use super::Enumerable;
+use std::{cmp::PartialEq, fmt::Debug};
 
 fn collect_all<T: Enumerable>() -> Vec<T> {
     T::enumerator().collect()
 }
 
 /// Assert enumerator yields all elements in order and provides correct size hint.
-fn assert_enumerator_eq_with_size_hint<T: Enumerable>(expected: impl IntoIterator<Item = T>) {
+fn assert_enumerator_eq_with_size_hint<T: Enumerable + Debug + PartialEq>(expected: impl IntoIterator<Item = T>) {
     let mut expected = expected.into_iter().collect::<Vec<T>>().into_iter();
     let mut iter = T::enumerator();
     loop {
