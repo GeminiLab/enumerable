@@ -122,7 +122,17 @@ impl Iterator for BoolEnumerator {
             _ => None,
         }
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        match self.state {
+            BoolEnumeratorState::False => (2, Some(2)),
+            BoolEnumeratorState::True => (1, Some(1)),
+            BoolEnumeratorState::Done => (0, Some(0)),
+        }
+    }
 }
+
+impl ExactSizeIterator for BoolEnumerator {}
 
 /// This is an implementation of the `Enumerable` trait for `bool`.
 impl Enumerable for bool {

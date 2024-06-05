@@ -4,9 +4,22 @@ fn collect_all<T: Enumerable>() -> Vec<T> {
     T::enumerator().collect()
 }
 
+/// Assert enumerator yields all elements in order and provides correct size hint.
+fn assert_enumerator_eq_with_size_hint<T: Enumerable>(expected: impl IntoIterator<Item = T>) {
+    let mut expected = expected.into_iter().collect::<Vec<T>>().into_iter();
+    let mut iter = T::enumerator();
+    loop {
+        assert_eq!(iter.size_hint(), expected.size_hint());
+        assert_eq!(iter.next(), expected.next());
+        if expected.len() == 0 {
+            break;
+        }
+    }
+}
+
 #[test]
 fn test_bool() {
-    assert_eq!(collect_all::<bool>(), vec![false, true]);
+    assert_enumerator_eq_with_size_hint(vec![false, true]);
 }
 
 #[test]
