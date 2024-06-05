@@ -26,6 +26,9 @@ pub use impl_tuple::*;
 /// - Numeric types: Yields all possible values of the type from the minimum to the maximum one.
 /// - [`Option`]: Yields `None` and then `Some(item)` for each possible value of `T`.
 /// - [`Result`]: Yields `Ok(item)` for each possible value of `T` and `Err(error)` for each possible value of `E`.
+/// - `char`: Yields all possible Unicode scalar values from `U+0000` to `U+10FFFF`, excluding the surrogate code points.
+/// - Tuples: Yields all possible values of the tuple with 1 to 2 elements, in a lexicographic ordering, provided that all elements implement `Enumerable`.
+/// - `()`: Yields the unit value `()`.
 ///
 /// ## Example
 ///
