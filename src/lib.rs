@@ -1,3 +1,6 @@
+mod impl_tuple;
+pub use impl_tuple::*;
+
 /// `Enumerable` is a trait for types that can have their possible values enumerated.
 ///
 /// ## Derivable
@@ -161,24 +164,6 @@ impl Enumerable for char {
     /// ```
     fn enumerator() -> Self::Enumerator {
         ('\u{0}'..='\u{D7FF}').chain('\u{E000}'..='\u{10FFFF}')
-    }
-}
-
-/// This is an implementation of the `Enumerable` trait for `()`.
-impl Enumerable for () {
-    type Enumerator = std::iter::Once<()>;
-
-    /// This method returns an iterator over all possible values of `()`.
-    ///
-    /// ## Example
-    ///
-    /// ```rust
-    /// let mut iter = <() as enumerable::Enumerable>::enumerator();
-    /// assert_eq!(iter.next(), Some(()));
-    /// assert_eq!(iter.next(), None);
-    /// ```
-    fn enumerator() -> Self::Enumerator {
-        std::iter::once(())
     }
 }
 

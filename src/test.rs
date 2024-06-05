@@ -55,13 +55,6 @@ fn test_char() {
     );
 }
 
-#[test]
-fn test_unit() {
-    let mut iter = <() as Enumerable>::enumerator();
-    assert_eq!(iter.next(), Some(()));
-    assert_eq!(iter.next(), None);
-}
-
 #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Enumerable)]
 enum TestEnum3 {
     A,
