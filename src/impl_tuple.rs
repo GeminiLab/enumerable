@@ -48,7 +48,7 @@ where
 }
 
 /// This macro generates a fragment of the body of the `calculate_next` method for a tuple enumerator.
-/// 
+///
 /// Rust macros are literally magic! This macro is a little bit tricky, but it's not really that complicated.
 macro_rules! calculate_next_fn_body_impl {
     (@ $tt:tt # $self:ident) => {
@@ -70,9 +70,9 @@ macro_rules! calculate_next_fn_body_impl {
 }
 
 /// This macro generates the body of the `calculate_next` method for a tuple enumerator.
-/// 
+///
 /// The `calculate_next` method advances the enumerator of the last element in the tuple. If the enumerator is exhausted, it resets the enumerator and advances the previous element's enumerator. This process continues until the first element's enumerator is exhausted, at which point the enumerator is exhausted.
-/// 
+///
 /// For example, for a tuple `(A, B, C)`, the generated code will look like this:
 /// ```rust,ignore
 /// fn calculate_next(&mut self) {
@@ -91,13 +91,13 @@ macro_rules! calculate_next_fn_body_impl {
 ///                                 return;
 ///                             }
 ///                         }
-/// 
+///
 ///                         // Reset the `b` enumerator.
 ///                         self.b_enumerator = <B as Enumerable>::enumerator();
 ///                         self.b_enumerator.next().unwrap()
 ///                     }
 ///                 }
-/// 
+///
 ///                 // Reset the `c` enumerator.
 ///                 self.c_enumerator = <C as Enumerable>::enumerator();
 ///                 self.c_enumerator.next().unwrap()
@@ -117,7 +117,7 @@ macro_rules! calculate_next_fn_body {
 }
 
 /// This macro implements `Enumerable` for tuples with a given number of elements.
-/// 
+///
 /// Details:
 /// 1. This macro accepts these arguments: the number of elements in the tuple (`$count`) and the list of the tuple's generic parameters (`$gen`). The number is used to generate the name of the enumerator struct only, and the generic parameters are used elsewhere.
 /// 2. This macro generates a struct named `[< Tuple $count Enumerator >]`(`TupleXEnumerator`) where `$count` is the number of elements in the tuple. This struct is the enumerator for the tuple.
@@ -251,29 +251,83 @@ mod tests {
 
     #[test]
     fn test_tuple16() {
-        type Tuple16 = (bool, bool, bool, bool, bool, bool, bool, bool, bool, bool, bool, bool, bool, bool, bool, bool);
+        type Tuple16 = (
+            bool,
+            bool,
+            bool,
+            bool,
+            bool,
+            bool,
+            bool,
+            bool,
+            bool,
+            bool,
+            bool,
+            bool,
+            bool,
+            bool,
+            bool,
+            bool,
+        );
         let tuple16_to_u16 = |t: Tuple16| {
             let mut result = 0u16;
-            if t.0 { result |= 1 << 15; }
-            if t.1 { result |= 1 << 14; }
-            if t.2 { result |= 1 << 13; }
-            if t.3 { result |= 1 << 12; }
-            if t.4 { result |= 1 << 11; }
-            if t.5 { result |= 1 << 10; }
-            if t.6 { result |= 1 << 9; }
-            if t.7 { result |= 1 << 8; }
-            if t.8 { result |= 1 << 7; }
-            if t.9 { result |= 1 << 6; }
-            if t.10 { result |= 1 << 5; }
-            if t.11 { result |= 1 << 4; }
-            if t.12 { result |= 1 << 3; }
-            if t.13 { result |= 1 << 2; }
-            if t.14 { result |= 1 << 1; }
-            if t.15 { result |= 1 << 0; }
+            if t.0 {
+                result |= 1 << 15;
+            }
+            if t.1 {
+                result |= 1 << 14;
+            }
+            if t.2 {
+                result |= 1 << 13;
+            }
+            if t.3 {
+                result |= 1 << 12;
+            }
+            if t.4 {
+                result |= 1 << 11;
+            }
+            if t.5 {
+                result |= 1 << 10;
+            }
+            if t.6 {
+                result |= 1 << 9;
+            }
+            if t.7 {
+                result |= 1 << 8;
+            }
+            if t.8 {
+                result |= 1 << 7;
+            }
+            if t.9 {
+                result |= 1 << 6;
+            }
+            if t.10 {
+                result |= 1 << 5;
+            }
+            if t.11 {
+                result |= 1 << 4;
+            }
+            if t.12 {
+                result |= 1 << 3;
+            }
+            if t.13 {
+                result |= 1 << 2;
+            }
+            if t.14 {
+                result |= 1 << 1;
+            }
+            if t.15 {
+                result |= 1 << 0;
+            }
             result
         };
 
-        let collected_as_u16 = <Tuple16 as Enumerable>::enumerator().map(tuple16_to_u16).collect::<Vec<_>>();
-        assert_eq!(collected_as_u16, <u16 as Enumerable>::enumerator().collect::<Vec<_>>())
+        let collected_as_u16 = <Tuple16 as Enumerable>::enumerator()
+            .map(tuple16_to_u16)
+            .collect::<Vec<_>>();
+        assert_eq!(
+            collected_as_u16,
+            <u16 as Enumerable>::enumerator().collect::<Vec<_>>()
+        )
     }
 }
