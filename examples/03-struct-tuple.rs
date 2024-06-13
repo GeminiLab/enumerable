@@ -26,4 +26,9 @@ pub fn main() {
     for value in Struct::enumerator() {
         println!("{:?}", value);
     }
+
+    println!("printing all possible values of (FieldA, FieldB):");
+    for value in <(FieldA, FieldB) as Enumerable>::enumerator() {
+        println!("{:?}", value);
+    }
 }
