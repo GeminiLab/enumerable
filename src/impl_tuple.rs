@@ -139,6 +139,7 @@ macro_rules! impl_enumerable_for_tuple {
                 calculated_next: Option<($($gen, )+)>,
             }
 
+            #[automatically_derived]
             impl<$($gen),+> Iterator for [< Tuple $count Enumerator >]<$($gen),+>
             where
                 $($gen: Enumerable,)+
@@ -184,6 +185,7 @@ macro_rules! impl_enumerable_for_tuple {
                 }
             }
 
+            #[automatically_derived]
             impl<$($gen),+> Enumerable for ($($gen, )+)
             where
                 $($gen: Enumerable,)+
