@@ -71,3 +71,16 @@ fn test_enum_derive() {
         vec![TestEnum3::A, TestEnum3::B, TestEnum3::C]
     );
 }
+
+#[test]
+fn test_unit_struct() {
+    #[derive(Copy, Clone, Enumerable)]
+    struct Unit;
+    #[derive(Copy, Clone, Enumerable)]
+    struct NamedZero{}
+    #[derive(Copy, Clone, Enumerable)]
+    struct UnnamedZero();
+    assert_eq!(1, collect_all::<Unit>().len());
+    assert_eq!(1, collect_all::<NamedZero>().len());
+    assert_eq!(1, collect_all::<UnnamedZero>().len());
+}

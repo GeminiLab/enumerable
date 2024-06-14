@@ -72,14 +72,16 @@ fn impl_enumerable_for_struct(s: ItemStruct) -> TokenStream {
             .into();
     }
 
+    
+    let field_count = fields.iter().count();
     let is_fields_named = match fields {
-        Fields::Named(_) => true,
-        Fields::Unnamed(_) => false,
-        Fields::Unit => {
+        Fields::Named(_) if field_count > 0 => true,
+        Fields::Unnamed(_) if field_count > 0 => false,
+        _ => {
+            // Fields::Unit or Fields::Named with no fields or Fields::Unnamed with no fields
             return impl_enumerable_for_unit_type(ident, quote!(#ident {}));
         }
     };
-    let field_count = fields.iter().count();
     let mut field_names: Vec<Ident> = Vec::with_capacity(field_count);
     let mut peekable_names: Vec<Ident> = Vec::with_capacity(field_count);
 
