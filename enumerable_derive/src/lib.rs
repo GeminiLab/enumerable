@@ -13,7 +13,8 @@ fn impl_enumerable_for_empty_type(ident: &Ident) -> TokenStream {
                 std::iter::empty()
             }
         }
-    ).into()
+    )
+    .into()
 }
 
 /// Implements the `Enumerable` trait for a unit type.
@@ -26,7 +27,8 @@ fn impl_enumerable_for_unit_type(ident: &Ident, value: TokenStream2) -> TokenStr
                 std::iter::once(#value)
             }
         }
-    ).into()
+    )
+    .into()
 }
 
 // TODO: should we keep using a const ref to a static array or replace it with a state-machine?
@@ -72,14 +74,17 @@ fn impl_enumerable_for_struct(s: ItemStruct) -> TokenStream {
             .into();
     }
 
-    
     let field_count = fields.iter().count();
     let is_fields_named = match fields {
         Fields::Named(_) if field_count > 0 => true,
         Fields::Unnamed(_) if field_count > 0 => false,
+        Fields::Unnamed(_) => {
+            // Fields::Unnamed with no fields
+            return impl_enumerable_for_unit_type(ident, quote!(#ident()));
+        }
         _ => {
             // Fields::Unit or Fields::Named with no fields or Fields::Unnamed with no fields
-            return impl_enumerable_for_unit_type(ident, quote!(#ident {}));
+            return impl_enumerable_for_unit_type(ident, quote!(#ident{}));
         }
     };
     let mut field_names: Vec<Ident> = Vec::with_capacity(field_count);

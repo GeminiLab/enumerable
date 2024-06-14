@@ -77,7 +77,7 @@ fn test_unit_struct() {
     #[derive(Copy, Clone, Enumerable)]
     struct Unit;
     #[derive(Copy, Clone, Enumerable)]
-    struct NamedZero{}
+    struct NamedZero {}
     #[derive(Copy, Clone, Enumerable)]
     struct UnnamedZero();
     assert_eq!(1, collect_all::<Unit>().len());
