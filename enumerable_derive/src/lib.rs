@@ -3,6 +3,32 @@ use proc_macro2::{Ident, TokenStream as TokenStream2};
 use quote::{format_ident, quote, quote_spanned, TokenStreamExt};
 use syn::{spanned::Spanned, Fields, Item, ItemEnum, ItemStruct};
 
+/// Implements the `Enumerable` trait for a empty type.
+fn impl_enumerable_for_empty_type(ident: &Ident) -> TokenStream {
+    quote!(
+        impl Enumerable for #ident {
+            type Enumerator = std::iter::Empty<Self>;
+
+            fn enumerator() -> Self::Enumerator {
+                std::iter::empty()
+            }
+        }
+    ).into()
+}
+
+/// Implements the `Enumerable` trait for a unit type.
+fn impl_enumerable_for_unit_type(ident: &Ident, value: TokenStream2) -> TokenStream {
+    quote!(
+        impl Enumerable for #ident {
+            type Enumerator = std::iter::Once<Self>;
+
+            fn enumerator() -> Self::Enumerator {
+                std::iter::once(#value)
+            }
+        }
+    ).into()
+}
+
 // TODO: should we keep using a const ref to a static array or replace it with a state-machine?
 /// Implements the `Enumerable` trait for an enum.
 fn impl_enumerable_for_enum(e: ItemEnum) -> TokenStream {
@@ -15,6 +41,10 @@ fn impl_enumerable_for_enum(e: ItemEnum) -> TokenStream {
 
     let variants_count = variants.iter().count();
     let variants_iter = variants.iter().map(|v| &v.ident);
+
+    if variants_count == 0 {
+        return impl_enumerable_for_empty_type(ident);
+    }
 
     quote!(
         #[automatically_derived]
@@ -46,16 +76,7 @@ fn impl_enumerable_for_struct(s: ItemStruct) -> TokenStream {
         Fields::Named(_) => true,
         Fields::Unnamed(_) => false,
         Fields::Unit => {
-            return quote!(
-                impl Enumerable for #ident {
-                    type Enumerator = std::iter::Empty<Self>;
-
-                    fn enumerator() -> Self::Enumerator {
-                        std::iter::empty()
-                    }
-                }
-            )
-            .into();
+            return impl_enumerable_for_unit_type(ident, quote!(#ident {}));
         }
     };
     let field_count = fields.iter().count();
