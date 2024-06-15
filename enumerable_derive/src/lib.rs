@@ -4,7 +4,7 @@ use quote::{format_ident, quote, quote_spanned, TokenStreamExt};
 use syn::{spanned::Spanned, Fields, Item, ItemEnum, ItemStruct};
 
 /// Implements the `Enumerable` trait for a empty type.
-fn impl_enumerable_for_empty_type(ident: &Ident) -> TokenStream {
+fn impl_enumerable_for_empty_type(ident: &Ident) -> TokenStream2 {
     quote!(
         impl Enumerable for #ident {
             type Enumerator = std::iter::Empty<Self>;
@@ -14,11 +14,10 @@ fn impl_enumerable_for_empty_type(ident: &Ident) -> TokenStream {
             }
         }
     )
-    .into()
 }
 
 /// Implements the `Enumerable` trait for a unit type.
-fn impl_enumerable_for_unit_type(ident: &Ident, value: TokenStream2) -> TokenStream {
+fn impl_enumerable_for_unit_type(ident: &Ident, value: TokenStream2) -> TokenStream2 {
     quote!(
         impl Enumerable for #ident {
             type Enumerator = std::iter::Once<Self>;
@@ -28,7 +27,6 @@ fn impl_enumerable_for_unit_type(ident: &Ident, value: TokenStream2) -> TokenStr
             }
         }
     )
-    .into()
 }
 
 struct EnumerableField {
@@ -78,7 +76,7 @@ fn impl_calculate_next_for_field_list(
 
 // TODO: should we keep using a const ref to a static array or replace it with a state-machine?
 /// Implements the `Enumerable` trait for an enum.
-fn impl_enumerable_for_enum(e: ItemEnum) -> TokenStream {
+fn impl_enumerable_for_enum(e: ItemEnum) -> TokenStream2 {
     let ident = &e.ident;
     let variants = &e.variants;
 
@@ -105,11 +103,10 @@ fn impl_enumerable_for_enum(e: ItemEnum) -> TokenStream {
             }
         }
     )
-    .into()
 }
 
 /// Implements the `Enumerable` trait for a struct.
-fn impl_enumerable_for_struct(s: ItemStruct) -> TokenStream {
+fn impl_enumerable_for_struct(s: ItemStruct) -> TokenStream2 {
     let vis = &s.vis;
     let ident = &s.ident;
     let fields = &s.fields;
@@ -232,7 +229,7 @@ fn impl_enumerable_for_struct(s: ItemStruct) -> TokenStream {
         }
     );
 
-    result.into()
+    result
 }
 
 /// Derives the `Enumerable` trait for an enum or struct.
@@ -245,4 +242,5 @@ pub fn derive_enumerable(input: TokenStream) -> TokenStream {
         Item::Struct(s) => impl_enumerable_for_struct(s),
         _ => quote_spanned!(target.span() => compile_error!("expected enum or struct")).into(),
     }
+    .into()
 }
