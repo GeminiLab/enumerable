@@ -224,64 +224,25 @@ where
     }
 }
 
-/// `ResultEnumerator` is an iterator over possible values of `Result<T, E>`.
-pub struct ResultEnumerator<T: Enumerable, E: Enumerable> {
-    over_results: bool,
-    results: <T as Enumerable>::Enumerator,
-    errors: <E as Enumerable>::Enumerator,
-}
-
-impl<T, E> ResultEnumerator<T, E>
-where
-    T: Enumerable,
-    E: Enumerable,
-{
-    /// Creates a new `ResultEnumerator` that wraps the enumerators of `T` and `E`.
-    pub(crate) fn new() -> Self {
-        Self {
-            over_results: true,
-            results: T::enumerator(),
-            errors: E::enumerator(),
-        }
-    }
-}
-
-impl<T, E> Iterator for ResultEnumerator<T, E>
-where
-    T: Enumerable,
-    E: Enumerable,
-{
-    type Item = Result<T, E>;
-
-    /// Returns the next item from the `ResultEnumerator`.
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.over_results {
-            match self.results.next() {
-                Some(result) => Some(Ok(result)),
-                None => {
-                    self.over_results = false;
-                    self.next()
-                }
-            }
-        } else {
-            match self.errors.next() {
-                Some(error) => Some(Err(error)),
-                None => None,
-            }
-        }
-    }
-}
-
+/// Implementation of the `Enumerable` trait for `Result<T, E>`, with std::iter::Chain and std::iter::Map.
 impl<T, E> Enumerable for Result<T, E>
 where
     T: Enumerable,
     E: Enumerable,
 {
-    type Enumerator = ResultEnumerator<T, E>;
+    type Enumerator = std::iter::Chain<
+        std::iter::Map<<T as Enumerable>::Enumerator, fn(T) -> Result<T, E>>,
+        std::iter::Map<<E as Enumerable>::Enumerator, fn(E) -> Result<T, E>>,
+    >;
 
     /// This method returns an iterator over all possible values of `Result<T, E>`.
     fn enumerator() -> Self::Enumerator {
-        ResultEnumerator::new()
+        let t: fn(T) -> Result<T, E> = Ok;
+        let e: fn(E) -> Result<T, E> = Err;
+
+        <T as Enumerable>::enumerator()
+            .map(t)
+            .chain(<E as Enumerable>::enumerator().map(e))
     }
 }
 
