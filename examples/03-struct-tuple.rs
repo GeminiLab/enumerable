@@ -21,9 +21,18 @@ struct Struct {
     b: FieldB,
 }
 
+#[derive(Copy, Clone, Enumerable, Debug)]
+#[allow(dead_code)]
+struct TupleLikeStruct(FieldA, FieldB);
+
 pub fn main() {
     println!("printing all possible values of Struct:");
     for value in Struct::enumerator() {
+        println!("{:?}", value);
+    }
+
+    println!("printing all possible values of TupleLikeStruct:");
+    for value in TupleLikeStruct::enumerator() {
         println!("{:?}", value);
     }
 

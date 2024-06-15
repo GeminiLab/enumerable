@@ -31,6 +31,51 @@ fn impl_enumerable_for_unit_type(ident: &Ident, value: TokenStream2) -> TokenStr
     .into()
 }
 
+struct EnumerableField {
+    mut_ref_name: Ident,
+    field_type: TokenStream2,
+    enumerator_expr: TokenStream2,
+}
+
+fn impl_calculate_next_for_field_list(
+    fields: impl Iterator<Item = EnumerableField>,
+    none_setter_breaker: TokenStream2,
+) -> TokenStream2 {
+    let mut result = quote!();
+    let mut iter = fields;
+    let first_field = iter.next().unwrap();
+
+    let mut_ref_name = &first_field.mut_ref_name;
+    let enumerator_expr = &first_field.enumerator_expr;
+    result.append_all(quote!(
+        *#mut_ref_name = match #enumerator_expr.next() {
+            Some(value) => value,
+            None => {
+                #none_setter_breaker;
+            },
+        };
+    ));
+
+    while let Some(field) = iter.next() {
+        let mut_ref_name = &field.mut_ref_name;
+        let field_type = &field.field_type;
+        let enumerator_expr = &field.enumerator_expr;
+        result = quote!(
+            *#mut_ref_name = match #enumerator_expr.next() {
+                Some(value) => value,
+                None => {
+                    #result
+
+                    #enumerator_expr = <#field_type as Enumerable>::enumerator();
+                    #enumerator_expr.next().unwrap()
+                },
+            };
+        );
+    }
+
+    result
+}
+
 // TODO: should we keep using a const ref to a static array or replace it with a state-machine?
 /// Implements the `Enumerable` trait for an enum.
 fn impl_enumerable_for_enum(e: ItemEnum) -> TokenStream {
@@ -87,70 +132,65 @@ fn impl_enumerable_for_struct(s: ItemStruct) -> TokenStream {
             return impl_enumerable_for_unit_type(ident, quote!(#ident{}));
         }
     };
+
     let mut field_names: Vec<Ident> = Vec::with_capacity(field_count);
-    let mut peekable_names: Vec<Ident> = Vec::with_capacity(field_count);
-
-    let enumerator_struct_ident = format_ident!("{}Enumerator", ident);
-    let mut enumerator_struct_fields = TokenStream2::new();
-    let mut enumerator_struct_initializer = TokenStream2::new();
-    let mut enumerator_struct_peek_function_body = TokenStream2::new();
-    let mut enumerator_struct_advance_function_body = TokenStream2::new();
-    for field in fields.iter().enumerate() {
-        let (i, field) = field;
-
+    let mut field_types: Vec<TokenStream2> = Vec::with_capacity(field_count);
+    let mut field_enumerator_names: Vec<Ident> = Vec::with_capacity(field_count);
+    let mut field_enumerator_types: Vec<TokenStream2> = Vec::with_capacity(field_count);
+    for (index, field) in fields.iter().enumerate() {
         let field_name = field
             .ident
             .as_ref()
             .cloned()
-            .unwrap_or(format_ident!("field_{}", i));
-        let peekable_name = field
-            .ident
-            .as_ref()
-            .map_or(format_ident!("peekable_{}", i), |ident| {
-                format_ident!("peekable_{}", ident)
-            });
-
-        let typ = field.ty.clone();
-        let enumerator_typ = quote!(<#typ as Enumerable>::Enumerator);
-        let peekable_typ = quote!(std::iter::Peekable<#enumerator_typ>);
-
-        enumerator_struct_fields.append_all(quote!(
-            #peekable_name: #peekable_typ,
-        ));
-
-        enumerator_struct_initializer.append_all(quote!(
-            #peekable_name: <#typ>::enumerator().peekable(),
-        ));
-
-        enumerator_struct_peek_function_body.append_all(quote!(
-            let #field_name = self.#peekable_name.peek().copied()?;
-        ));
-
-        enumerator_struct_advance_function_body = if i == 0 {
-            quote!(
-                self.#peekable_name.next();
-            )
-        } else {
-            quote!(
-                self.#peekable_name.next();
-                if self.#peekable_name.peek().is_some() {
-                    return;
-                }
-                self.#peekable_name = <#typ>::enumerator().peekable();
-
-                #enumerator_struct_advance_function_body
-            )
-        };
+            .unwrap_or(format_ident!("field_{}", index));
+        let field_type = &field.ty;
+        let enumerator_name = format_ident!("enumerator_{}", field_name);
+        let enumerator_type = quote!(<#field_type as Enumerable>::Enumerator);
 
         field_names.push(field_name);
-        peekable_names.push(peekable_name);
+        field_types.push(quote!(#field_type));
+        field_enumerator_names.push(enumerator_name);
+        field_enumerator_types.push(enumerator_type);
     }
 
-    let enumerator_struct_peek_function_return = if is_fields_named {
-        quote!(return Some(#ident{#(#field_names),*}))
+    let enumerator_struct_ident = format_ident!("{}Enumerator", ident);
+    let field_enumerators = quote!(#(#field_enumerator_names: #field_enumerator_types,)*);
+    let calculated_next_binder = if is_fields_named {
+        quote!(#ident{#(#field_names),*})
     } else {
-        quote!(return Some(#ident(#(#field_names),*)))
+        quote!(#ident(#(#field_names),*))
     };
+    let enumerator_struct_creator = quote!(
+        #(
+            let mut #field_enumerator_names = <#field_types as Enumerable>::enumerator();
+            let #field_names = #field_enumerator_names.next();
+        )*
+
+        let calculated_next = if false #(|| #field_names.is_none())* {
+            None
+        } else {
+            #(let #field_names = #field_names.unwrap();)*
+            Some(#calculated_next_binder)
+        };
+
+        Self {
+            #(#field_enumerator_names,)*
+            calculated_next,
+        }
+    );
+    let calculate_next_body = impl_calculate_next_for_field_list(
+        field_names
+            .iter()
+            .zip(field_enumerator_names.iter().zip(field_types.iter()))
+            .map(
+                |(field_name, (enumerator_name, field_type))| EnumerableField {
+                    mut_ref_name: field_name.clone(),
+                    field_type: field_type.clone(),
+                    enumerator_expr: quote!(self.#enumerator_name),
+                },
+            ),
+        quote!(self.calculated_next = None; return;),
+    );
 
     let result = quote!(
         #[automatically_derived]
@@ -164,23 +204,19 @@ fn impl_enumerable_for_struct(s: ItemStruct) -> TokenStream {
 
         #[doc(hidden)]
         #vis struct #enumerator_struct_ident {
-            #enumerator_struct_fields
+            #field_enumerators
+            calculated_next: Option<#ident>,
         }
 
         impl #enumerator_struct_ident {
             fn new() -> Self {
-                Self {
-                    #enumerator_struct_initializer
+                #enumerator_struct_creator
+            }
+
+            fn calculate_next(&mut self) {
+                if let Some(#calculated_next_binder) = &mut self.calculated_next {
+                    #calculate_next_body
                 }
-            }
-
-            fn peek(&mut self) -> Option<<Self as Iterator>::Item> {
-                #enumerator_struct_peek_function_body
-                #enumerator_struct_peek_function_return
-            }
-
-            fn advance(&mut self) {
-                #enumerator_struct_advance_function_body
             }
         }
 
@@ -189,8 +225,8 @@ fn impl_enumerable_for_struct(s: ItemStruct) -> TokenStream {
             type Item = #ident;
 
             fn next(&mut self) -> Option<<Self as Iterator>::Item> {
-                let result = self.peek();
-                self.advance();
+                let result = self.calculated_next;
+                self.calculate_next();
                 result
             }
         }
