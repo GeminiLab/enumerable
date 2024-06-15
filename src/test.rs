@@ -35,8 +35,9 @@ mod utils {
     }
 
     #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Enumerable)]
-    pub struct StructTuple2(Enum3, Enum4);
+    pub struct StructTuple2(pub Enum3, pub Enum4);
 
+    #[allow(dead_code)]
     pub fn collect_all<T: Enumerable>() -> Vec<T> {
         T::enumerator().collect()
     }
@@ -90,9 +91,16 @@ fn test_result_bool_bool() {
 }
 
 #[test]
-fn test_u8_i8() {
+fn test_primitive_numeric() {
     assert_enumerator_eq(u8::MIN..=u8::MAX);
     assert_enumerator_eq(i8::MIN..=i8::MAX);
+    assert_enumerator_eq(i16::MIN..=i16::MAX);
+    assert_enumerator_eq(u16::MIN..=u16::MAX);
+    /*
+        // Very slow, tested locally.
+        assert_enumerator_eq(i32::MIN..=i32::MAX);
+        assert_enumerator_eq(u32::MIN..=u32::MAX);
+     */
 }
 
 #[test]
@@ -116,4 +124,25 @@ fn test_unit_struct() {
     assert_enumerator_eq(vec![StructUnit {}]);
     assert_enumerator_eq(vec![StructUnitFieldsNamed {}]);
     assert_enumerator_eq(vec![StructUnitFieldsUnnamed()]);
+}
+
+#[test]
+fn test_structs() {
+    assert_enumerator_eq(vec![
+        Struct2 { e3: Enum3::A, e4: Enum4::W }, Struct2 { e3: Enum3::A, e4: Enum4::X },
+        Struct2 { e3: Enum3::A, e4: Enum4::Y }, Struct2 { e3: Enum3::A, e4: Enum4::Z },
+        Struct2 { e3: Enum3::B, e4: Enum4::W }, Struct2 { e3: Enum3::B, e4: Enum4::X },
+        Struct2 { e3: Enum3::B, e4: Enum4::Y }, Struct2 { e3: Enum3::B, e4: Enum4::Z },
+        Struct2 { e3: Enum3::C, e4: Enum4::W }, Struct2 { e3: Enum3::C, e4: Enum4::X },
+        Struct2 { e3: Enum3::C, e4: Enum4::Y }, Struct2 { e3: Enum3::C, e4: Enum4::Z },
+    ]);
+
+    assert_enumerator_eq(vec![
+        StructTuple2(Enum3::A, Enum4::W), StructTuple2(Enum3::A, Enum4::X),
+        StructTuple2(Enum3::A, Enum4::Y), StructTuple2(Enum3::A, Enum4::Z),
+        StructTuple2(Enum3::B, Enum4::W), StructTuple2(Enum3::B, Enum4::X),
+        StructTuple2(Enum3::B, Enum4::Y), StructTuple2(Enum3::B, Enum4::Z),
+        StructTuple2(Enum3::C, Enum4::W), StructTuple2(Enum3::C, Enum4::X),
+        StructTuple2(Enum3::C, Enum4::Y), StructTuple2(Enum3::C, Enum4::Z),
+    ]);
 }
