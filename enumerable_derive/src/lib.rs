@@ -48,10 +48,10 @@ fn impl_enumerable_for_struct(s: ItemStruct) -> TokenStream {
         Fields::Unit => {
             return quote!(
                 impl Enumerable for #ident {
-                    type Enumerator = std::iter::Empty<Self>;
+                    type Enumerator = std::iter::Once<Self>;
 
                     fn enumerator() -> Self::Enumerator {
-                        std::iter::empty()
+                        std::iter::once(Self)
                     }
                 }
             )

@@ -6,7 +6,9 @@ fn collect_all<T: Enumerable>() -> Vec<T> {
 }
 
 /// Assert enumerator yields all elements in order and provides correct size hint.
-fn assert_enumerator_eq_with_size_hint<T: Enumerable + Debug + PartialEq>(expected: impl IntoIterator<Item = T>) {
+fn assert_enumerator_eq_with_size_hint<T: Enumerable + Debug + PartialEq>(
+    expected: impl IntoIterator<Item = T>,
+) {
     let mut expected = expected.into_iter().collect::<Vec<T>>().into_iter();
     let mut iter = T::enumerator();
     loop {
@@ -67,5 +69,42 @@ fn test_enum_derive() {
     assert_eq!(
         collect_all::<TestEnum3>(),
         vec![TestEnum3::A, TestEnum3::B, TestEnum3::C]
+    );
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Enumerable)]
+struct UnitStruct;
+
+#[test]
+fn test_unit_struct_derive() {
+    assert_eq!(collect_all::<UnitStruct>(), vec![UnitStruct]);
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Enumerable)]
+struct StructWithTwoNamedFields {
+    b: bool,
+    u: u8,
+}
+
+#[test]
+fn test_struct_with_two_named_fields_derive() {
+    assert_eq!(
+        collect_all::<StructWithTwoNamedFields>(),
+        <(bool, u8)>::enumerator()
+            .map(|(b, u)| StructWithTwoNamedFields { b, u })
+            .collect::<Vec<_>>()
+    );
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Enumerable)]
+struct StructWithUnnamedFields(u8, bool);
+
+#[test]
+fn test_struct_with_unnamed_fields_derive() {
+    assert_eq!(
+        collect_all::<StructWithUnnamedFields>(),
+        <(u8, bool)>::enumerator()
+            .map(|(u, b)| StructWithUnnamedFields(u, b))
+            .collect::<Vec<_>>()
     );
 }
