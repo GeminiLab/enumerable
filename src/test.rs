@@ -46,6 +46,8 @@ mod utils {
 use utils::*;
 
 fn assert_enumerator_eq<T: Enumerable + Debug + PartialEq>(expected: impl IntoIterator<Item = T>) {
+    let expected = Vec::from_iter(expected);
+    assert_eq!(T::ENUMERABLE_SIZE, expected.len());
     let mut expected_iter = expected.into_iter();
     let mut actual_iter = T::enumerator();
 
@@ -97,10 +99,10 @@ fn test_primitive_numeric() {
     assert_enumerator_eq(i16::MIN..=i16::MAX);
     assert_enumerator_eq(u16::MIN..=u16::MAX);
     /*
-        // Very slow, tested locally.
-        assert_enumerator_eq(i32::MIN..=i32::MAX);
-        assert_enumerator_eq(u32::MIN..=u32::MAX);
-     */
+       // Very slow, tested locally.
+       assert_enumerator_eq(i32::MIN..=i32::MAX);
+       assert_enumerator_eq(u32::MIN..=u32::MAX);
+    */
 }
 
 #[test]
@@ -129,20 +131,76 @@ fn test_unit_struct() {
 #[test]
 fn test_structs() {
     assert_enumerator_eq(vec![
-        Struct2 { e3: Enum3::A, e4: Enum4::W }, Struct2 { e3: Enum3::A, e4: Enum4::X },
-        Struct2 { e3: Enum3::A, e4: Enum4::Y }, Struct2 { e3: Enum3::A, e4: Enum4::Z },
-        Struct2 { e3: Enum3::B, e4: Enum4::W }, Struct2 { e3: Enum3::B, e4: Enum4::X },
-        Struct2 { e3: Enum3::B, e4: Enum4::Y }, Struct2 { e3: Enum3::B, e4: Enum4::Z },
-        Struct2 { e3: Enum3::C, e4: Enum4::W }, Struct2 { e3: Enum3::C, e4: Enum4::X },
-        Struct2 { e3: Enum3::C, e4: Enum4::Y }, Struct2 { e3: Enum3::C, e4: Enum4::Z },
+        Struct2 {
+            e3: Enum3::A,
+            e4: Enum4::W,
+        },
+        Struct2 {
+            e3: Enum3::A,
+            e4: Enum4::X,
+        },
+        Struct2 {
+            e3: Enum3::A,
+            e4: Enum4::Y,
+        },
+        Struct2 {
+            e3: Enum3::A,
+            e4: Enum4::Z,
+        },
+        Struct2 {
+            e3: Enum3::B,
+            e4: Enum4::W,
+        },
+        Struct2 {
+            e3: Enum3::B,
+            e4: Enum4::X,
+        },
+        Struct2 {
+            e3: Enum3::B,
+            e4: Enum4::Y,
+        },
+        Struct2 {
+            e3: Enum3::B,
+            e4: Enum4::Z,
+        },
+        Struct2 {
+            e3: Enum3::C,
+            e4: Enum4::W,
+        },
+        Struct2 {
+            e3: Enum3::C,
+            e4: Enum4::X,
+        },
+        Struct2 {
+            e3: Enum3::C,
+            e4: Enum4::Y,
+        },
+        Struct2 {
+            e3: Enum3::C,
+            e4: Enum4::Z,
+        },
     ]);
 
     assert_enumerator_eq(vec![
-        StructTuple2(Enum3::A, Enum4::W), StructTuple2(Enum3::A, Enum4::X),
-        StructTuple2(Enum3::A, Enum4::Y), StructTuple2(Enum3::A, Enum4::Z),
-        StructTuple2(Enum3::B, Enum4::W), StructTuple2(Enum3::B, Enum4::X),
-        StructTuple2(Enum3::B, Enum4::Y), StructTuple2(Enum3::B, Enum4::Z),
-        StructTuple2(Enum3::C, Enum4::W), StructTuple2(Enum3::C, Enum4::X),
-        StructTuple2(Enum3::C, Enum4::Y), StructTuple2(Enum3::C, Enum4::Z),
+        StructTuple2(Enum3::A, Enum4::W),
+        StructTuple2(Enum3::A, Enum4::X),
+        StructTuple2(Enum3::A, Enum4::Y),
+        StructTuple2(Enum3::A, Enum4::Z),
+        StructTuple2(Enum3::B, Enum4::W),
+        StructTuple2(Enum3::B, Enum4::X),
+        StructTuple2(Enum3::B, Enum4::Y),
+        StructTuple2(Enum3::B, Enum4::Z),
+        StructTuple2(Enum3::C, Enum4::W),
+        StructTuple2(Enum3::C, Enum4::X),
+        StructTuple2(Enum3::C, Enum4::Y),
+        StructTuple2(Enum3::C, Enum4::Z),
     ]);
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Enumerable)]
+struct UnitStruct;
+
+#[test]
+fn test_derive_unit_struct() {
+    assert_eq!(collect_all::<UnitStruct>(), vec![UnitStruct]);
 }
