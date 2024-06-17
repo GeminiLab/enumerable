@@ -3,7 +3,7 @@ use enumerable::Enumerable;
 #[derive(Copy, Clone, Enumerable, Debug)]
 enum SomeEnum {
     A,
-    B,
+    B(bool),
     C,
     D,
 }

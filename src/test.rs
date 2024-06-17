@@ -5,6 +5,9 @@ mod utils {
     use crate::Enumerable;
 
     #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Enumerable)]
+    pub enum Enum0 {}
+
+    #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Enumerable)]
     pub enum Enum3 {
         A,
         B,
@@ -36,6 +39,17 @@ mod utils {
 
     #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Enumerable)]
     pub struct StructTuple2(pub Enum3, pub Enum4);
+
+    #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Enumerable)]
+    pub enum ComplexEnum {
+        NoField,
+        UnnamedField(Enum3),
+        NamedField { e3: Enum3 },
+        MultipleUnnamedFields(Enum3, Enum4),
+        MultipleNamedFields { e3: Enum3, e4: Enum4 },
+        EmptyBranch(Enum0),
+        UnnamedFieldAfterEmpty { e3: Enum3 },
+    }
 
     #[allow(dead_code)]
     pub fn collect_all<T: Enumerable>() -> Vec<T> {
@@ -117,6 +131,23 @@ fn test_char() {
 fn test_enum_derive() {
     assert_enumerator_eq(vec![Enum3::A, Enum3::B, Enum3::C]);
     assert_enumerator_eq(vec![Enum4::W, Enum4::X, Enum4::Y, Enum4::Z])
+}
+
+#[test]
+fn test_enum_derive_complex() {
+    let mut expected = vec![ComplexEnum::NoField];
+    expected.extend(Enum3::enumerator().map(ComplexEnum::UnnamedField));
+    expected.extend(Enum3::enumerator().map(|e3| ComplexEnum::NamedField { e3 }));
+    expected.extend(
+        <(Enum3, Enum4) as Enumerable>::enumerator()
+            .map(|(e3, e4)| ComplexEnum::MultipleUnnamedFields(e3, e4)),
+    );
+    expected.extend(
+        <(Enum3, Enum4) as Enumerable>::enumerator()
+            .map(|(e3, e4)| ComplexEnum::MultipleNamedFields { e3, e4 }),
+    );
+    expected.extend(Enum3::enumerator().map(|e3| ComplexEnum::UnnamedFieldAfterEmpty { e3 }));
+    assert_enumerator_eq(expected);
 }
 
 #[test]
