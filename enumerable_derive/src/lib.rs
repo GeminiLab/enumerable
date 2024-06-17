@@ -1,14 +1,15 @@
-use proc_macro::TokenStream;
-use proc_macro2::{Ident, TokenStream as TokenStream2};
+use proc_macro::TokenStream as TokenStream1;
+use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote, quote_spanned, TokenStreamExt};
 use syn::{spanned::Spanned, Field, Fields, Item, ItemEnum, ItemStruct};
 
+/// Generates the default name for the enumerator of a type by its name.
 fn get_default_enumerator_name(implemented: &Ident) -> Ident {
     format_ident!("{}Enumerator", implemented)
 }
 
 /// Implements the `Enumerable` trait for an empty type.
-fn impl_enumerable_for_empty_type(ident: &Ident) -> TokenStream2 {
+fn impl_enumerable_for_empty_type(ident: &Ident) -> TokenStream {
     quote!(
         impl Enumerable for #ident {
             type Enumerator = std::iter::Empty<Self>;
@@ -21,7 +22,7 @@ fn impl_enumerable_for_empty_type(ident: &Ident) -> TokenStream2 {
 }
 
 /// Implements the `Enumerable` trait for a unit type.
-fn impl_enumerable_for_unit_type(ident: &Ident, value: TokenStream2) -> TokenStream2 {
+fn impl_enumerable_for_unit_type(ident: &Ident, value: TokenStream) -> TokenStream {
     quote!(
         impl Enumerable for #ident {
             type Enumerator = std::iter::Once<Self>;
@@ -33,20 +34,60 @@ fn impl_enumerable_for_unit_type(ident: &Ident, value: TokenStream2) -> TokenStr
     )
 }
 
-struct GeneratedFieldsNextCalculator {
-    body: TokenStream2,
-    binder: TokenStream2,
-    field_refs: Vec<TokenStream2>,
-    field_types: Vec<TokenStream2>,
-    enumerator_refs: Vec<TokenStream2>,
-    enumerator_types: Vec<TokenStream2>,
+/// Implements the `Enumerable` trait for an enum without fields.
+///
+/// It calls `impl_enumerable_for_empty_type` if the enum has no variants.
+// TODO: should we keep using a const ref to a static array or replace it with a state-machine?
+fn impl_enumerable_for_plain_enum<'a>(
+    ident: &Ident,
+    vars: impl Iterator<Item = &'a Ident>,
+) -> TokenStream {
+    let vars: Vec<_> = vars.collect();
+    let vars_count = vars.len();
+
+    if vars_count == 0 {
+        return impl_enumerable_for_empty_type(ident);
+    }
+
+    quote!(
+        #[automatically_derived]
+        impl Enumerable for #ident {
+            type Enumerator = std::iter::Copied<std::slice::Iter<'static, Self>>;
+
+            fn enumerator() -> Self::Enumerator {
+                const ALL_VARIANTS: &[#ident; #vars_count] = &[#(#ident::#vars),*];
+
+                return ALL_VARIANTS.iter().copied()
+            }
+        }
+    )
 }
 
+/// The result of the `generate_next_calculator_for_fields` function.
+///
+/// # Fields
+/// - `body`: The code fragment which calculates the next value of the fields from a list of enumerators.
+/// - `binder`: A code fragment that can be used to construct or destruct the fields.
+/// - `field_refs`: The list of mutable references to the fields.
+/// - `field_types`: The list of types of the fields.
+/// - `enumerator_refs`: The list of mutable references to the enumerators of the fields.
+/// - `enumerator_types`: The list of types of the enumerators of the fields.
+struct GeneratedFieldsNextCalculator {
+    body: TokenStream,
+    binder: TokenStream,
+    field_refs: Vec<TokenStream>,
+    field_types: Vec<TokenStream>,
+    enumerator_refs: Vec<TokenStream>,
+    enumerator_types: Vec<TokenStream>,
+}
+
+/// The name of a field or its index if it's from a list of unnamed fields.
 enum FieldNameOrIndex<'a> {
     Name(&'a Ident),
     Index(usize),
 }
 
+/// Returns the name of a field or its index if it's from a list of unnamed fields.
 fn field_name_or_index(index: usize, field: &Field) -> FieldNameOrIndex {
     field
         .ident
@@ -60,13 +101,13 @@ fn field_name_or_index(index: usize, field: &Field) -> FieldNameOrIndex {
 /// ## Parameters
 /// - `fields`: The list of fields. The order of the fields is important, as the generated code will enumerate them in the lexicographic order.
 /// - `breaker`: The code to execute when the enumeration of the fields is done.
-/// - `field_ref_factory`: A function that generates the code to a mutable reference to a field.
-/// - `enumerator_ref_factory`: A function that generates the code to a mutable reference to the enumerator of a field.
+/// - `field_ref_factory`: A function that generates a mutable reference to a field.
+/// - `enumerator_ref_factory`: A function that generates a mutable reference to an enumerator.
 fn generate_next_calculator_for_fields(
     fields: &Fields,
-    breaker: TokenStream2,
-    mut field_ref_factory: impl FnMut(FieldNameOrIndex) -> TokenStream2,
-    mut enumerator_ref_factory: impl FnMut(FieldNameOrIndex) -> TokenStream2,
+    breaker: TokenStream,
+    mut field_ref_factory: impl FnMut(FieldNameOrIndex) -> TokenStream,
+    mut enumerator_ref_factory: impl FnMut(FieldNameOrIndex) -> TokenStream,
 ) -> GeneratedFieldsNextCalculator {
     if fields.is_empty() {
         let empty_binder = if let Fields::Unnamed(_) = fields {
@@ -96,7 +137,7 @@ fn generate_next_calculator_for_fields(
     let mut field_types = vec![];
     let mut enumerator_refs = vec![];
     let mut enumerator_types = vec![];
-    let mut binder_items: Vec<TokenStream2> = vec![];
+    let mut binder_items: Vec<TokenStream> = vec![];
 
     let mut calculator_body = quote!();
 
@@ -156,38 +197,13 @@ fn generate_next_calculator_for_fields(
     };
 }
 
-// TODO: should we keep using a const ref to a static array or replace it with a state-machine?
-fn impl_enumerable_for_plain_enum<'a>(
-    ident: &Ident,
-    vars: impl Iterator<Item = &'a Ident>,
-) -> TokenStream2 {
-    let vars: Vec<_> = vars.collect();
-    let vars_count = vars.len();
-
-    if vars_count == 0 {
-        return impl_enumerable_for_empty_type(ident);
-    }
-
-    quote!(
-        #[automatically_derived]
-        impl Enumerable for #ident {
-            type Enumerator = std::iter::Copied<std::slice::Iter<'static, Self>>;
-
-            fn enumerator() -> Self::Enumerator {
-                const ALL_VARIANTS: &[#ident; #vars_count] = &[#(#ident::#vars),*];
-
-                return ALL_VARIANTS.iter().copied()
-            }
-        }
-    )
-}
-
 /// Implements the `Enumerable` trait for an enum.
-fn impl_enumerable_for_enum(e: ItemEnum) -> TokenStream2 {
+fn impl_enumerable_for_enum(e: ItemEnum) -> TokenStream {
     let vis = &e.vis;
     let ident = &e.ident;
     let variants = &e.variants;
 
+    // call `impl_enumerable_for_empty_type` if the enum has no fields
     if variants.iter().all(|v| v.fields.is_empty()) {
         return impl_enumerable_for_plain_enum(ident, variants.iter().map(|v| &v.ident));
     }
@@ -198,9 +214,9 @@ fn impl_enumerable_for_enum(e: ItemEnum) -> TokenStream2 {
     }
 
     let enumerator_ident = get_default_enumerator_name(ident);
-    let mut enumerator_variants = TokenStream2::new();
-    let mut calculate_next_match_branches = TokenStream2::new();
-    let mut get_calculated_next_match_branches = TokenStream2::new();
+    let mut enumerator_variants = TokenStream::new();
+    let mut calculate_next_match_branches = TokenStream::new();
+    let mut get_calculated_next_match_branches = TokenStream::new();
 
     let enumerator_variant_name_before = |variant: &Ident| format_ident!("Before{}", variant);
     let enumerator_variant_name_in = |variant: &Ident| format_ident!("In{}", variant);
@@ -241,14 +257,18 @@ fn impl_enumerable_for_enum(e: ItemEnum) -> TokenStream2 {
             quote!(*self = Self::#next_enumerator_variant_before; continue;),
             |field_name_or_index| {
                 let ident = match field_name_or_index {
-                    FieldNameOrIndex::Name(field_name) => format_ident!("calculated_{}", field_name),
+                    FieldNameOrIndex::Name(field_name) => {
+                        format_ident!("calculated_{}", field_name)
+                    }
                     FieldNameOrIndex::Index(index) => format_ident!("calculated_field_{}", index),
                 };
                 quote!(#ident)
             },
             |field_name_or_index| {
                 let ident = match field_name_or_index {
-                    FieldNameOrIndex::Name(field_name) => format_ident!("enumerator_{}", field_name),
+                    FieldNameOrIndex::Name(field_name) => {
+                        format_ident!("enumerator_{}", field_name)
+                    }
                     FieldNameOrIndex::Index(index) => format_ident!("enumerator_field_{}", index),
                 };
                 quote!(#ident)
@@ -349,7 +369,7 @@ fn impl_enumerable_for_enum(e: ItemEnum) -> TokenStream2 {
 }
 
 /// Implements the `Enumerable` trait for a struct.
-fn impl_enumerable_for_struct(s: ItemStruct) -> TokenStream2 {
+fn impl_enumerable_for_struct(s: ItemStruct) -> TokenStream {
     let vis = &s.vis;
     let ident = &s.ident;
     let fields = &s.fields;
@@ -463,7 +483,7 @@ fn impl_enumerable_for_struct(s: ItemStruct) -> TokenStream2 {
 
 /// Derives the `Enumerable` trait for an enum or struct.
 #[proc_macro_derive(Enumerable)]
-pub fn derive_enumerable(input: TokenStream) -> TokenStream {
+pub fn derive_enumerable(input: TokenStream1) -> TokenStream1 {
     let target = syn::parse_macro_input!(input as Item);
 
     match target {

@@ -6,18 +6,18 @@ pub use impl_tuple::*;
 /// ## Derivable
 ///
 /// This trait can be derived using `#[derive(Enumerable)]` on:
-/// - Enums with no associated data.
+/// - Enums with fields that implement `Enumerable`
 /// - Structs with fields that implement `Enumerable`.
 ///
 /// It's NOT guaranteed that the derived implementation will return a specific type of [`Iterator`].
 /// Do NOT rely on the type of the iterator used by the derived implementation.
 ///
-/// It's guaranteed that the derived implementation will yield all possible variants of the enum
+/// It's guaranteed that the derived implementation will yield all possible variants of an enum
 /// from the top to the bottom.
 ///
-/// It's guaranteed that the derived implementation will yield all possible values of the struct
-/// in a lexicographic ordering based on the top-to-bottom declaration order of the struct’s members,
-/// as [`Ord`] does.
+/// It's guaranteed that the derived implementation will yield all possible values of a struct (or a
+/// variant with some fields of an enum) in a lexicographic ordering based on the top-to-bottom
+/// declaration order of the fields, as [`Ord`] does.
 ///
 /// ## Built-in Implementations
 ///
@@ -25,9 +25,12 @@ pub use impl_tuple::*;
 /// - `bool`: Yields `false` and then `true`.
 /// - Numeric types: Yields all possible values of the type from the minimum to the maximum one.
 /// - [`Option`]: Yields `None` and then `Some(item)` for each possible value of `T`.
-/// - [`Result`]: Yields `Ok(item)` for each possible value of `T` and `Err(error)` for each possible value of `E`.
-/// - `char`: Yields all possible Unicode scalar values from `U+0000` to `U+10FFFF`, excluding the surrogate code points.
-/// - Tuples: Yields all possible values of the tuple with 1 to 16 elements, in a lexicographic ordering, provided that all elements implement `Enumerable`.
+/// - [`Result`]: Yields `Ok(item)` for each possible value of `T` and `Err(error)` for each
+/// possible value of `E`.
+/// - `char`: Yields all possible Unicode scalar values from `U+0000` to `U+10FFFF`, excluding the
+/// surrogate code points (`U+D800` to `U+DFFF`).
+/// - Tuples: Yields all possible values of the tuple with 1 to 16 elements, in a lexicographic
+/// ordering, provided that all elements implement `Enumerable`.
 /// - `()`: Yields the unit value `()`.
 ///
 /// ## Example
