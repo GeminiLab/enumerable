@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
 use proc_macro2::{Ident, TokenStream as TokenStream2};
 use quote::{format_ident, quote, quote_spanned, TokenStreamExt};
-use syn::{spanned::Spanned, Fields, Field, Item, ItemEnum, ItemStruct};
+use syn::{spanned::Spanned, Field, Fields, Item, ItemEnum, ItemStruct};
 
 fn get_default_enumerator_name(implemented: &Ident) -> Ident {
     format_ident!("{}Enumerator", implemented)
@@ -91,7 +91,7 @@ fn generate_next_calculator_for_fields(
         false
     };
 
-    let mut iter = fields.iter().enumerate();
+    let iter = fields.iter().enumerate();
     let mut field_refs = vec![];
     let mut field_types = vec![];
     let mut enumerator_refs = vec![];
@@ -155,6 +155,7 @@ fn generate_next_calculator_for_fields(
     };
 }
 
+// TODO: should we keep using a const ref to a static array or replace it with a state-machine?
 fn impl_enumerable_for_plain_enum<'a>(
     ident: &Ident,
     vars: impl Iterator<Item = &'a Ident>,
@@ -180,7 +181,6 @@ fn impl_enumerable_for_plain_enum<'a>(
     )
 }
 
-// TODO: should we keep using a const ref to a static array or replace it with a state-machine?
 /// Implements the `Enumerable` trait for an enum.
 fn impl_enumerable_for_enum(e: ItemEnum) -> TokenStream2 {
     let vis = &e.vis;
@@ -196,79 +196,154 @@ fn impl_enumerable_for_enum(e: ItemEnum) -> TokenStream2 {
             .into();
     }
 
-    unimplemented!(); /*
-                      let enumerator_ident = get_default_enumerator_name(ident);
-                      let enumerator_variants = TokenStream2::new();
-                      let calculate_next_match_branches = TokenStream2::new();
-                      let get_calculated_next_match_branches = TokenStream2::new();
+    let enumerator_ident = get_default_enumerator_name(ident);
+    let mut enumerator_variants = TokenStream2::new();
+    let mut calculate_next_match_branches = TokenStream2::new();
+    let mut get_calculated_next_match_branches = TokenStream2::new();
 
-                      let enumerator_variant_name_before = |variant: &Ident| format_ident!("Before{}", variant);
-                      let enumerator_variant_name_in = |variant: &Ident| format_ident!("In{}", variant);
-                      let enumerator_variant_name_done = format_ident!("Done");
+    let enumerator_variant_name_before = |variant: &Ident| format_ident!("Before{}", variant);
+    let enumerator_variant_name_in = |variant: &Ident| format_ident!("In{}", variant);
+    let enumerator_variant_name_done = format_ident!("Done");
 
-                      let variant_idents = variants.iter().map(|v| v.ident.clone()).collect::<Vec<_>>();
-                      let variant_count = variant_idents.len();
-                      let first_enumerator_variant = enumerator_variant_name_before(&variant_idents[0]);
+    let variant_idents = variants.iter().map(|v| v.ident.clone()).collect::<Vec<_>>();
+    let enumerator_variant_names_before = variant_idents
+        .iter()
+        .map(enumerator_variant_name_before)
+        .collect::<Vec<_>>();
+    let enumerator_variant_names_in = variant_idents
+        .iter()
+        .map(enumerator_variant_name_in)
+        .collect::<Vec<_>>();
+    let variant_count = variant_idents.len();
+    let first_enumerator_variant = enumerator_variant_name_before(&variant_idents[0]);
 
-                      for (index, var) in variants.iter().enumerate() {
-                          let enumerator_variant_before = enumerator_variant_name_before(&var.ident);
-                          let enumerator_variant_in = enumerator_variant_name_in(&var.ident);
+    for (index, var) in variants.iter().enumerate() {
+        let var_ident = &variant_idents[index];
+        let enumerator_variant_before = &enumerator_variant_names_before[index];
+        let enumerator_variant_in = &enumerator_variant_names_in[index];
 
-                          let fields = match &var.fields {
-                              Fields::Named(fields) => fields.named.iter().map(|f| &f.ty),
-                              Fields::Unnamed(fields) => fields.unnamed.iter().map(|f| &f.ty),
-                              Fields::Unit => continue,
-                          };
+        let next_enumerator_variant_before = if index < variant_count - 1 {
+            &enumerator_variant_names_before[index + 1]
+        } else {
+            &enumerator_variant_name_done
+        };
 
-                          enumerator_variants.append_all(quote!(
-                              #enumerator_variant_before,
-                              #enumerator_variant_in(#var),
-                          ));
-                      }
+        let GeneratedFieldsNextCalculator {
+            body,
+            binder,
+            field_refs,
+            field_types,
+            enumerator_refs,
+            enumerator_types,
+        } = generate_next_calculator_for_fields(
+            &var.fields,
+            quote!(*self = Self::#next_enumerator_variant_before; continue;),
+            |field_name_or_index| {
+                let ident = match field_name_or_index {
+                    FieldNameOrIndex::Name(field_name) => format_ident!("calculated_{}", field_name),
+                    FieldNameOrIndex::Index(index) => format_ident!("calculated_field_{}", index),
+                };
+                quote!(#ident)
+            },
+            |field_name_or_index| {
+                let ident = match field_name_or_index {
+                    FieldNameOrIndex::Name(field_name) => format_ident!("enumerator_{}", field_name),
+                    FieldNameOrIndex::Index(index) => format_ident!("enumerator_field_{}", index),
+                };
+                quote!(#ident)
+            },
+        );
 
-                      quote!(
-                          #[automatically_derived]
-                          impl Enumerable for #ident {
-                              type Enumerator = #enumerator_ident;
+        enumerator_variants.append_all(quote!(
+            #enumerator_variant_before,
+            #enumerator_variant_in{#(#enumerator_refs:#enumerator_types,)* #(#field_refs:#field_types,)*},
+        ));
 
-                              fn enumerator() -> Self::Enumerator {
-                                  #enumerator_ident::new()
-                              }
-                          }
+        calculate_next_match_branches.append_all(quote!(
+            Self::#enumerator_variant_before => {
+                #(
+                    let mut #enumerator_refs = <#field_types as Enumerable>::enumerator();
+                    let #field_refs = #enumerator_refs.next();
+                )*
 
-                          #[doc(hidden)]
-                          #vis enum #enumerator_ident {
-                              #enumerator_variants
-                          }
+                if false #(|| #field_refs.is_none())* {
+                    *self = Self::#next_enumerator_variant_before;
+                    continue;
+                } else {
+                    #(
+                        let #field_refs = #field_refs.unwrap();
+                    )*
+                    *self = Self::#enumerator_variant_in{#(#enumerator_refs,)* #(#field_refs,)*};
+                }
+            },
+            Self::#enumerator_variant_in{#(#enumerator_refs,)* #(#field_refs,)*} => {
+                #body
+            },
+        ));
 
-                          #[automatically_derived]
-                          impl Iterator for #enumerator_ident {
-                              type Item = #ident;
+        get_calculated_next_match_branches.append_all(quote!(
+            Self::#enumerator_variant_in{#(#field_refs,)* ..} => {
+                #(
+                    let #field_refs = *#field_refs;
+                )*
+                Some(#ident::#var_ident #binder)
+            },
+        ));
+    }
 
-                              fn next(&mut self) -> Option<<Self as Iterator>::Item> {
-                                  let result
-                              }
-                          }
+    quote!(
+        #[automatically_derived]
+        impl Enumerable for #ident {
+            type Enumerator = #enumerator_ident;
 
-                          impl #enumerator_ident {
-                              fn new() -> Self {
-                                  #enumerator_ident::#first_enumerator_variant
-                              }
+            fn enumerator() -> Self::Enumerator {
+                #enumerator_ident::new()
+            }
+        }
 
-                              fn calculate_next(&mut self) {
-                                  match self {
-                                      #calculate_next_match_branches
-                                  }
-                              }
+        #[doc(hidden)]
+        #vis enum #enumerator_ident {
+            #enumerator_variants
+            #enumerator_variant_name_done,
+        }
 
-                              fn get_calculated_next() -> Option<#ident> {
-                                  match self {
-                                      #get_calculated_next_match_branches
-                                  }
-                              }
-                          }
-                      )
-                      */
+        #[automatically_derived]
+        impl Iterator for #enumerator_ident {
+            type Item = #ident;
+
+            fn next(&mut self) -> Option<<Self as Iterator>::Item> {
+                let result = self.get_calculated_next();
+                self.calculate_next();
+                result
+            }
+        }
+
+        impl #enumerator_ident {
+            fn new() -> Self {
+                let mut result = #enumerator_ident::#first_enumerator_variant;
+                result.calculate_next();
+                result
+            }
+
+            fn calculate_next(&mut self) {
+                loop {
+                    match self {
+                        #calculate_next_match_branches
+                        _ => *self = Self::#enumerator_variant_name_done,
+                    }
+
+                    break;
+                }
+            }
+
+            fn get_calculated_next(&mut self) -> Option<#ident> {
+                match self {
+                    #get_calculated_next_match_branches
+                    _ => None,
+                }
+            }
+        }
+    )
 }
 
 /// Implements the `Enumerable` trait for a struct.
