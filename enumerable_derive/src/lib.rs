@@ -130,6 +130,7 @@ fn generate_next_calculator_for_fields(
 
         binder_items.push(if is_named {
             let field_name = field.ident.as_ref().unwrap();
+            // FIXME: this may result in something like `field_name: field_name` which will be warned. We use #[allow(non_shorthand_field_patterns)] now but is there a better way?
             quote!(#field_name: #field_ref)
         } else {
             quote!(#field_ref)
@@ -325,6 +326,7 @@ fn impl_enumerable_for_enum(e: ItemEnum) -> TokenStream2 {
                 result
             }
 
+            #[allow(unreachable_code, unused_variables, non_shorthand_field_patterns)]
             fn calculate_next(&mut self) {
                 loop {
                     match self {
@@ -432,6 +434,7 @@ fn impl_enumerable_for_struct(s: ItemStruct) -> TokenStream2 {
                 #enumerator_struct_creator
             }
 
+            #[allow(non_shorthand_field_patterns)]
             fn calculate_next(&mut self) {
                 #(
                     let mut #enumerator_names = &mut self.#enumerator_names;
