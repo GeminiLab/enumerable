@@ -1,11 +1,59 @@
 use proc_macro::TokenStream as TokenStream1;
-use proc_macro2::{Ident, TokenStream};
+use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote, quote_spanned, TokenStreamExt};
-use syn::{spanned::Spanned, Field, Fields, Item, ItemEnum, ItemStruct};
+use syn::{
+    spanned::Spanned, Attribute, Expr, ExprLit, Field, Fields, Item, ItemEnum, ItemStruct, Lit,
+    Meta, MetaNameValue,
+};
 
 /// Generates the default name for the enumerator of a type by its name.
 fn get_default_enumerator_name(implemented: &Ident) -> Ident {
     format_ident!("{}Enumerator", implemented)
+}
+
+/// Gets the name of the custom enumerator from the attributes.
+///
+/// We accept two forms of `enumerator` attribute:
+/// - `#[enumerator = "CustomEnumerator"]`
+/// - `#[enumerator(CustomEnumerator)]`
+fn get_custom_enumerator_name_from_attrs(
+    attrs: &Vec<Attribute>,
+) -> Result<Option<Ident>, (Span, String)> {
+    let mut already_found = None;
+
+    for attr in attrs {
+        if attr.path().is_ident("enumerator") {
+            if already_found.is_some() {
+                return Err((
+                    attr.span(),
+                    "multiple enumerator names specified".to_string(),
+                ));
+            }
+
+            already_found = Some(match &attr.meta {
+                Meta::List(list) => {
+                    list.parse_args::<Ident>().map_err(|e| (list.span(), format!("failed while parsing expected enumerator name (a single identifier): {}", e)))?
+                }
+                Meta::NameValue(MetaNameValue { value: Expr::Lit(ExprLit { lit: Lit::Str(str), .. }), .. }) => {
+                    Ident::new(&str.value(), str.span())
+                }
+                _ => return Err((attr.span(), "expected enumerator name not specified".to_string()))
+            });
+        }
+    }
+
+    Ok(already_found)
+}
+
+/// Gets the name of the enumerator to be generated for a type.
+///
+/// If the `enumerator` attribute is not specified, it returns the default name (`<TypeName>Enumerator`).
+fn get_enumerator_name(ident: &Ident, attrs: &Vec<Attribute>) -> Result<Ident, TokenStream> {
+    match get_custom_enumerator_name_from_attrs(attrs) {
+        Ok(Some(ident)) => Ok(ident),
+        Ok(None) => Ok(get_default_enumerator_name(ident)),
+        Err((span, e)) => Err(quote_spanned!(span => compile_error!(#e);)),
+    }
 }
 
 /// Implements the `Enumerable` trait for an empty type.
@@ -203,17 +251,21 @@ fn impl_enumerable_for_enum(e: ItemEnum) -> TokenStream {
     let ident = &e.ident;
     let variants = &e.variants;
 
+    let enumerator_ident = match get_enumerator_name(ident, &e.attrs) {
+        Ok(ident) => ident,
+        Err(e) => return e,
+    };
+
     // call `impl_enumerable_for_empty_type` if the enum has no fields
     if variants.iter().all(|v| v.fields.is_empty()) {
         return impl_enumerable_for_plain_enum(ident, variants.iter().map(|v| &v.ident));
     }
 
     if !e.generics.params.is_empty() {
-        return quote_spanned!(e.generics.span() => compile_error!("generic types not supported"))
+        return quote_spanned!(e.generics.span() => compile_error!("generic types not supported yet");)
             .into();
     }
 
-    let enumerator_ident = get_default_enumerator_name(ident);
     let mut enumerator_variants = TokenStream::new();
     let mut calculate_next_match_branches = TokenStream::new();
     let mut get_calculated_next_match_branches = TokenStream::new();
@@ -374,8 +426,13 @@ fn impl_enumerable_for_struct(s: ItemStruct) -> TokenStream {
     let ident = &s.ident;
     let fields = &s.fields;
 
+    let enumerator_struct_ident = match get_enumerator_name(ident, &s.attrs) {
+        Ok(ident) => ident,
+        Err(e) => return e,
+    };
+
     if !s.generics.params.is_empty() {
-        return quote_spanned!(s.generics.span() => compile_error!("generic types not supported"))
+        return quote_spanned!(s.generics.span() => compile_error!("generic types not supported yet");)
             .into();
     }
 
@@ -409,7 +466,6 @@ fn impl_enumerable_for_struct(s: ItemStruct) -> TokenStream {
         return impl_enumerable_for_unit_type(ident, quote!(#ident #binder));
     }
 
-    let enumerator_struct_ident = get_default_enumerator_name(ident);
     let field_enumerators = enumerator_names
         .iter()
         .zip(enumerator_types.iter())
@@ -482,14 +538,14 @@ fn impl_enumerable_for_struct(s: ItemStruct) -> TokenStream {
 }
 
 /// Derives the `Enumerable` trait for an enum or struct.
-#[proc_macro_derive(Enumerable)]
+#[proc_macro_derive(Enumerable, attributes(enumerator))]
 pub fn derive_enumerable(input: TokenStream1) -> TokenStream1 {
     let target = syn::parse_macro_input!(input as Item);
 
     match target {
         Item::Enum(e) => impl_enumerable_for_enum(e),
         Item::Struct(s) => impl_enumerable_for_struct(s),
-        _ => quote_spanned!(target.span() => compile_error!("expected enum or struct")).into(),
+        _ => quote_spanned!(target.span() => compile_error!("expected enum or struct");).into(),
     }
     .into()
 }

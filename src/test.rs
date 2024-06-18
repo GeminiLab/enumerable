@@ -38,9 +38,11 @@ mod utils {
     }
 
     #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Enumerable)]
+    #[enumerator(YesThisTypeEnumeratesStructTuple2)] // test custom enumerator names with a weird one
     pub struct StructTuple2(pub Enum3, pub Enum4);
 
     #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Enumerable)]
+    #[enumerator = "ComplexEnumerator"]
     pub enum ComplexEnum {
         NoField,
         UnnamedField(Enum3),
@@ -148,6 +150,9 @@ fn test_enum_derive_complex() {
     );
     expected.extend(Enum3::enumerator().map(|e3| ComplexEnum::UnnamedFieldAfterEmpty { e3 }));
     assert_enumerator_eq(expected);
+
+    // Checks whether the custom enumerator name is used.
+    let _: ComplexEnumerator = ComplexEnum::enumerator();
 }
 
 #[test]
