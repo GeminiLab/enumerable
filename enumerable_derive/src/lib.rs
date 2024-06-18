@@ -54,7 +54,7 @@ fn get_enumerator_name(ident: &Ident, attrs: &Vec<Attribute>) -> Result<Ident, T
         Ok(Some(ident)) => Ok(ident),
         Ok(None) => Ok(get_default_enumerator_name(ident)),
         Err((span, e)) => {
-            Err(quote_spanned!(span => compile_error!(#e)))
+            Err(quote_spanned!(span => compile_error!(#e);))
         },
     }
 }
@@ -265,7 +265,7 @@ fn impl_enumerable_for_enum(e: ItemEnum) -> TokenStream {
     }
 
     if !e.generics.params.is_empty() {
-        return quote_spanned!(e.generics.span() => compile_error!("generic types not supported"))
+        return quote_spanned!(e.generics.span() => compile_error!("generic types not supported yet");)
             .into();
     }
 
@@ -435,7 +435,7 @@ fn impl_enumerable_for_struct(s: ItemStruct) -> TokenStream {
     };
 
     if !s.generics.params.is_empty() {
-        return quote_spanned!(s.generics.span() => compile_error!("generic types not supported"))
+        return quote_spanned!(s.generics.span() => compile_error!("generic types not supported yet");)
             .into();
     }
 
@@ -548,7 +548,7 @@ pub fn derive_enumerable(input: TokenStream1) -> TokenStream1 {
     let result = match target {
         Item::Enum(e) => impl_enumerable_for_enum(e),
         Item::Struct(s) => impl_enumerable_for_struct(s),
-        _ => quote_spanned!(target.span() => compile_error!("expected enum or struct")).into(),
+        _ => quote_spanned!(target.span() => compile_error!("expected enum or struct");).into(),
     }
     .into();
 
