@@ -12,22 +12,19 @@ fn get_default_enumerator_name(implemented: &Ident) -> Ident {
     format_ident!("{}Enumerator", implemented)
 }
 
-/// Gets the name of our crate "enumerable".
-fn get_crate_name() -> Result<String, TokenStream> {
+/// Gets the path to the `Enumerable` trait.
+fn get_enumerable_trait_path() -> Result<TokenStream, TokenStream> {
     match crate_name("enumerable") {
-        Ok(FoundCrate::Itself) => Ok("enumerable".to_string()),
-        Ok(FoundCrate::Name(name)) => Ok(name),
+        Ok(FoundCrate::Itself) => Ok(quote!(Enumerable)),
+        Ok(FoundCrate::Name(name)) => {
+            let crate_name = Ident::new(name.as_str(), Span::call_site());
+            Ok(quote!(#crate_name::Enumerable))
+        },
         Err(e) => {
             let e = format!("failed to find crate `enumerable`: {}", e);
             Err(quote!(compile_error!(#e);))
         }
     }
-}
-
-/// Gets the path to the `Enumerable` trait.
-fn get_enumerable_trait_path() -> Result<TokenStream, TokenStream> {
-    let crate_name = Ident::new(get_crate_name()?.as_str(), Span::call_site());
-    Ok(quote!(#crate_name::Enumerable))
 }
 
 /// Gets the name of the custom enumerator from the attributes.
