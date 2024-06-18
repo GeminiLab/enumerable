@@ -1,5 +1,6 @@
 [workspace]
 members = ["enumerable_derive"]
+exclude = ["examples"]
 
 [workspace.package]
 authors = [ "aarkegz <aarkegz@gmail.com>" ]
