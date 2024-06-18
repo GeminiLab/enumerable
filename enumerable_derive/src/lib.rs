@@ -19,7 +19,7 @@ fn get_enumerable_trait_path() -> Result<TokenStream, TokenStream> {
         Ok(FoundCrate::Name(name)) => {
             let crate_name = Ident::new(name.as_str(), Span::call_site());
             Ok(quote!(#crate_name::Enumerable))
-        },
+        }
         Err(e) => {
             let e = format!("failed to find crate `enumerable`: {}", e);
             Err(quote!(compile_error!(#e);))
