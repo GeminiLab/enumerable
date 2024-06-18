@@ -1,5 +1,6 @@
 use proc_macro::TokenStream as TokenStream1;
 use proc_macro2::{Ident, Span, TokenStream};
+use proc_macro_crate::{crate_name, FoundCrate};
 use quote::{format_ident, quote, quote_spanned, TokenStreamExt};
 use syn::{
     spanned::Spanned, Attribute, Expr, ExprLit, Field, Fields, Item, ItemEnum, ItemStruct, Lit,
@@ -9,6 +10,24 @@ use syn::{
 /// Generates the default name for the enumerator of a type by its name.
 fn get_default_enumerator_name(implemented: &Ident) -> Ident {
     format_ident!("{}Enumerator", implemented)
+}
+
+/// Gets the name of our crate "enumerable".
+fn get_crate_name() -> Result<String, TokenStream> {
+    match crate_name("enumerable") {
+        Ok(FoundCrate::Itself) => Ok("enumerable".to_string()),
+        Ok(FoundCrate::Name(name)) => Ok(name),
+        Err(e) => {
+            let e = format!("failed to find crate `enumerable`: {}", e);
+            Err(quote!(compile_error!(#e);))
+        }
+    }
+}
+
+/// Gets the path to the `Enumerable` trait.
+fn get_enumerable_trait_path() -> Result<TokenStream, TokenStream> {
+    let crate_name = Ident::new(get_crate_name()?.as_str(), Span::call_site());
+    Ok(quote!(#crate_name::Enumerable))
 }
 
 /// Gets the name of the custom enumerator from the attributes.
@@ -57,9 +76,12 @@ fn get_enumerator_name(ident: &Ident, attrs: &Vec<Attribute>) -> Result<Ident, T
 }
 
 /// Implements the `Enumerable` trait for an empty type.
-fn impl_enumerable_for_empty_type(ident: &Ident) -> TokenStream {
+fn impl_enumerable_for_empty_type(
+    ident: &Ident,
+    enumerable_trait_path: TokenStream,
+) -> TokenStream {
     quote!(
-        impl Enumerable for #ident {
+        impl #enumerable_trait_path for #ident {
             type Enumerator = std::iter::Empty<Self>;
 
             fn enumerator() -> Self::Enumerator {
@@ -70,9 +92,13 @@ fn impl_enumerable_for_empty_type(ident: &Ident) -> TokenStream {
 }
 
 /// Implements the `Enumerable` trait for a unit type.
-fn impl_enumerable_for_unit_type(ident: &Ident, value: TokenStream) -> TokenStream {
+fn impl_enumerable_for_unit_type(
+    ident: &Ident,
+    value: TokenStream,
+    enumerable_trait_path: TokenStream,
+) -> TokenStream {
     quote!(
-        impl Enumerable for #ident {
+        impl #enumerable_trait_path for #ident {
             type Enumerator = std::iter::Once<Self>;
 
             fn enumerator() -> Self::Enumerator {
@@ -89,17 +115,18 @@ fn impl_enumerable_for_unit_type(ident: &Ident, value: TokenStream) -> TokenStre
 fn impl_enumerable_for_plain_enum<'a>(
     ident: &Ident,
     vars: impl Iterator<Item = &'a Ident>,
+    enumerable_trait_path: TokenStream,
 ) -> TokenStream {
     let vars: Vec<_> = vars.collect();
     let vars_count = vars.len();
 
     if vars_count == 0 {
-        return impl_enumerable_for_empty_type(ident);
+        return impl_enumerable_for_empty_type(ident, enumerable_trait_path);
     }
 
     quote!(
         #[automatically_derived]
-        impl Enumerable for #ident {
+        impl #enumerable_trait_path for #ident {
             type Enumerator = std::iter::Copied<std::slice::Iter<'static, Self>>;
 
             fn enumerator() -> Self::Enumerator {
@@ -156,6 +183,7 @@ fn generate_next_calculator_for_fields(
     breaker: TokenStream,
     mut field_ref_factory: impl FnMut(FieldNameOrIndex) -> TokenStream,
     mut enumerator_ref_factory: impl FnMut(FieldNameOrIndex) -> TokenStream,
+    enumerable_trait_path: TokenStream,
 ) -> GeneratedFieldsNextCalculator {
     if fields.is_empty() {
         let empty_binder = if let Fields::Unnamed(_) = fields {
@@ -210,7 +238,7 @@ fn generate_next_calculator_for_fields(
                     None => {
                         #calculator_body
 
-                        *#enumerator_ref = <#field_type as Enumerable>::enumerator();
+                        *#enumerator_ref = <#field_type as #enumerable_trait_path>::enumerator();
                         #enumerator_ref.next().unwrap()
                     },
                 };
@@ -228,7 +256,7 @@ fn generate_next_calculator_for_fields(
         field_refs.push(field_ref);
         field_types.push(quote!(#field_type));
         enumerator_refs.push(enumerator_ref);
-        enumerator_types.push(quote!(<#field_type as Enumerable>::Enumerator));
+        enumerator_types.push(quote!(<#field_type as #enumerable_trait_path>::Enumerator));
     }
 
     return GeneratedFieldsNextCalculator {
@@ -251,6 +279,11 @@ fn impl_enumerable_for_enum(e: ItemEnum) -> TokenStream {
     let ident = &e.ident;
     let variants = &e.variants;
 
+    let enumerable_trait_path = match get_enumerable_trait_path() {
+        Ok(path) => path,
+        Err(e) => return e,
+    };
+
     let enumerator_ident = match get_enumerator_name(ident, &e.attrs) {
         Ok(ident) => ident,
         Err(e) => return e,
@@ -258,7 +291,11 @@ fn impl_enumerable_for_enum(e: ItemEnum) -> TokenStream {
 
     // call `impl_enumerable_for_empty_type` if the enum has no fields
     if variants.iter().all(|v| v.fields.is_empty()) {
-        return impl_enumerable_for_plain_enum(ident, variants.iter().map(|v| &v.ident));
+        return impl_enumerable_for_plain_enum(
+            ident,
+            variants.iter().map(|v| &v.ident),
+            enumerable_trait_path,
+        );
     }
 
     if !e.generics.params.is_empty() {
@@ -325,6 +362,7 @@ fn impl_enumerable_for_enum(e: ItemEnum) -> TokenStream {
                 };
                 quote!(#ident)
             },
+            enumerable_trait_path.clone(),
         );
 
         enumerator_variants.append_all(quote!(
@@ -335,7 +373,7 @@ fn impl_enumerable_for_enum(e: ItemEnum) -> TokenStream {
         calculate_next_match_branches.append_all(quote!(
             Self::#enumerator_variant_before => {
                 #(
-                    let mut #enumerator_refs = <#field_types as Enumerable>::enumerator();
+                    let mut #enumerator_refs = <#field_types as #enumerable_trait_path>::enumerator();
                     let #field_refs = #enumerator_refs.next();
                 )*
 
@@ -366,7 +404,7 @@ fn impl_enumerable_for_enum(e: ItemEnum) -> TokenStream {
 
     quote!(
         #[automatically_derived]
-        impl Enumerable for #ident {
+        impl #enumerable_trait_path for #ident {
             type Enumerator = #enumerator_ident;
 
             fn enumerator() -> Self::Enumerator {
@@ -426,6 +464,11 @@ fn impl_enumerable_for_struct(s: ItemStruct) -> TokenStream {
     let ident = &s.ident;
     let fields = &s.fields;
 
+    let enumerable_trait_path = match get_enumerable_trait_path() {
+        Ok(path) => path,
+        Err(e) => return e,
+    };
+
     let enumerator_struct_ident = match get_enumerator_name(ident, &s.attrs) {
         Ok(ident) => ident,
         Err(e) => return e,
@@ -460,10 +503,11 @@ fn impl_enumerable_for_struct(s: ItemStruct) -> TokenStream {
             };
             quote!(#ident)
         },
+        enumerable_trait_path.clone(),
     );
 
     if field_names.is_empty() {
-        return impl_enumerable_for_unit_type(ident, quote!(#ident #binder));
+        return impl_enumerable_for_unit_type(ident, quote!(#ident #binder), enumerable_trait_path);
     }
 
     let field_enumerators = enumerator_names
@@ -472,7 +516,7 @@ fn impl_enumerable_for_struct(s: ItemStruct) -> TokenStream {
         .map(|(name, ty)| quote!(#name: #ty,));
     let enumerator_struct_creator = quote!(
         #(
-            let mut #enumerator_names = <#field_types as Enumerable>::enumerator();
+            let mut #enumerator_names = <#field_types as #enumerable_trait_path>::enumerator();
             let #field_names = #enumerator_names.next();
         )*
 
@@ -491,7 +535,7 @@ fn impl_enumerable_for_struct(s: ItemStruct) -> TokenStream {
 
     let result = quote!(
         #[automatically_derived]
-        impl Enumerable for #ident {
+        impl #enumerable_trait_path for #ident {
             type Enumerator = #enumerator_struct_ident;
 
             fn enumerator() -> Self::Enumerator {
