@@ -1,42 +1,41 @@
-use proc_macro::{TokenStream as TokenStream1};
-use proc_macro2::{Ident, TokenStream, Span};
+use proc_macro::TokenStream as TokenStream1;
+use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote, quote_spanned, TokenStreamExt};
-use syn::{spanned::Spanned, Attribute, Field, Fields, Item, ItemEnum, ItemStruct, Meta, Expr, Lit};
+use syn::{
+    spanned::Spanned, Attribute, Expr, ExprLit, Field, Fields, Item, ItemEnum, ItemStruct, Lit,
+    Meta, MetaNameValue,
+};
 
 /// Generates the default name for the enumerator of a type by its name.
 fn get_default_enumerator_name(implemented: &Ident) -> Ident {
     format_ident!("{}Enumerator", implemented)
 }
 
-/// Checks if an expression is an identifier or a string literal, then convert it to an identifier.
-fn try_get_ident_or_str_lit_from_expr(expr: &Expr) -> Option<Ident> {
-    match expr {
-        Expr::Path(path) => path.path.get_ident().cloned(),
-        Expr::Lit(lit) => if let Lit::Str(str) = &lit.lit { Some(format_ident!("{}", str.value())) } else { None },
-        _ => None,
-    }
-}
-
 /// Gets the name of the custom enumerator from the attributes.
 ///
 /// We accept two forms of `enumerator` attribute:
-/// - `#[enumerator = "CustomEnumerator"]` or `#[enumerator = CustomEnumerator]`
+/// - `#[enumerator = "CustomEnumerator"]`
 /// - `#[enumerator(CustomEnumerator)]`
-fn get_custom_enumerator_name_from_attrs(attrs: &Vec<Attribute>) -> Result<Option<Ident>, (Span, String)> {
+fn get_custom_enumerator_name_from_attrs(
+    attrs: &Vec<Attribute>,
+) -> Result<Option<Ident>, (Span, String)> {
     let mut already_found = None;
 
     for attr in attrs {
         if attr.path().is_ident("enumerator") {
             if already_found.is_some() {
-                return Err((attr.span(), "multiple enumerator names specified".to_string()));
+                return Err((
+                    attr.span(),
+                    "multiple enumerator names specified".to_string(),
+                ));
             }
 
             already_found = Some(match &attr.meta {
                 Meta::List(list) => {
                     list.parse_args::<Ident>().map_err(|e| (list.span(), format!("failed while parsing expected enumerator name (a single identifier): {}", e)))?
                 }
-                Meta::NameValue(name_value) => {
-                    try_get_ident_or_str_lit_from_expr(&name_value.value).ok_or_else(|| (name_value.value.span(), "failed while parsing expected enumerator name, a identifier or a string literal expected".to_string()))?
+                Meta::NameValue(MetaNameValue { value: Expr::Lit(ExprLit { lit: Lit::Str(str), .. }), .. }) => {
+                    Ident::new(&str.value(), str.span())
                 }
                 _ => return Err((attr.span(), "expected enumerator name not specified".to_string()))
             });
@@ -53,9 +52,7 @@ fn get_enumerator_name(ident: &Ident, attrs: &Vec<Attribute>) -> Result<Ident, T
     match get_custom_enumerator_name_from_attrs(attrs) {
         Ok(Some(ident)) => Ok(ident),
         Ok(None) => Ok(get_default_enumerator_name(ident)),
-        Err((span, e)) => {
-            Err(quote_spanned!(span => compile_error!(#e);))
-        },
+        Err((span, e)) => Err(quote_spanned!(span => compile_error!(#e);)),
     }
 }
 
@@ -545,13 +542,10 @@ fn impl_enumerable_for_struct(s: ItemStruct) -> TokenStream {
 pub fn derive_enumerable(input: TokenStream1) -> TokenStream1 {
     let target = syn::parse_macro_input!(input as Item);
 
-    let result = match target {
+    match target {
         Item::Enum(e) => impl_enumerable_for_enum(e),
         Item::Struct(s) => impl_enumerable_for_struct(s),
         _ => quote_spanned!(target.span() => compile_error!("expected enum or struct");).into(),
     }
-    .into();
-
-    println!("{:?}", result);
-    result
+    .into()
 }

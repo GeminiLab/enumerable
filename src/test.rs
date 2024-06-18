@@ -42,7 +42,7 @@ mod utils {
     pub struct StructTuple2(pub Enum3, pub Enum4);
 
     #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Enumerable)]
-    #[enumerator = ComplexEnumerator]
+    #[enumerator = "ComplexEnumerator"]
     pub enum ComplexEnum {
         NoField,
         UnnamedField(Enum3),

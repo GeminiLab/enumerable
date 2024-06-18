@@ -5,19 +5,32 @@ pub use impl_tuple::*;
 ///
 /// ## Derivable
 ///
-/// This trait can be derived using `#[derive(Enumerable)]` on:
-/// - Enums with fields that implement `Enumerable`
-/// - Structs with fields that implement `Enumerable`.
+/// This trait can be derived using `#[derive(Enumerable)]` on structs and enums, if
+/// - they have no fields, or
+/// - all of their fields implement `Enumerable`.
 ///
-/// It's NOT guaranteed that the derived implementation will return a specific type of [`Iterator`].
-/// Do NOT rely on the type of the iterator used by the derived implementation.
+/// Types with generic parameters are not supported yet.
 ///
-/// It's guaranteed that the derived implementation will yield all possible variants of an enum
-/// from the top to the bottom.
+/// See "Guarantees and Limitations" below for more information.
 ///
-/// It's guaranteed that the derived implementation will yield all possible values of a struct (or a
-/// variant with some fields of an enum) in a lexicographic ordering based on the top-to-bottom
-/// declaration order of the fields, as [`Ord`] does.
+/// ### Customizing the Generated Enumerator
+///
+/// In most cases, `#[derive(Enumerable)]` will generate a new enumerator type that enumerates all
+/// possible values of the type to be derived. The default name of the enumerator type is
+/// `<Type>Enumerator`, where `<Type>` is the name of the type to be derived.
+///
+/// You can customize the name of the generated type by using
+/// - `#[enumerator = "DesiredEnumeratorName"]`, or
+/// - `#[enumerator(DesiredEnumeratorName)]`,
+///
+/// they are equivalent.
+///
+/// `#[derive(Enumerable)]` will NOT generate a new type when the type to be derived is
+/// - an enum with zero variants,
+/// - an enum with no fields, or
+/// - a struct with no fields,
+///
+/// in these cases, the custom enumerator name will be ignored.
 ///
 /// ## Built-in Implementations
 ///
@@ -30,8 +43,34 @@ pub use impl_tuple::*;
 /// - `char`: Yields all possible Unicode scalar values from `U+0000` to `U+10FFFF`, excluding the
 /// surrogate code points (`U+D800` to `U+DFFF`).
 /// - Tuples: Yields all possible values of the tuple with 1 to 16 elements, in a lexicographic
-/// ordering, provided that all elements implement `Enumerable`.
+/// ordering (as `std::cmp::Ord` does), provided that all elements implement `Enumerable`.
 /// - `()`: Yields the unit value `()`.
+///
+/// ## Guarantees and Requirements
+///
+/// It is guaranteed that:
+/// - The derived implementations will enumerate over all possible variants of an enum in the order
+/// they are declared. The only exception is variants with fields of uninhabited types (e.g. empty
+/// types), which will be skipped.
+/// - The derived implementations will yield all possible values of a struct (or a variant with some
+/// fields of an enum) in a lexicographic ordering based on the top-to-bottom declaration order of
+/// the fields, as built-in implementations for tuples do.
+///
+/// It is **NOT** guaranteed that:
+/// - The derived and the built-in implementations will return a specific type of [`Iterator`] as
+/// enumerators.
+///
+///   Do **NOT** rely on the specific type of the enumerator provided by an `Enumerable` type,
+/// unless you are using `#[enumerator(...)]` and knowing that `#[derive(Enumerable)]` will generate
+/// an enumerator type, use `<T as Enumerable>::Enumerator` instead in all other cases.
+///
+/// It is **REQUIRED** that if you are implementing `Enumerable` for a type manually, your
+/// enumerator should:
+/// - Calling to `enumerator()` should be idempotent, i.e. calling it multiple times should return
+/// iterators that yield the same values.
+///
+/// Failed to meet the requirements will result in unexpected behavior when deriving `Enumerable` on
+/// types that contain the type you implemented `Enumerable` for.
 ///
 /// ## Example
 ///
