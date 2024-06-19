@@ -101,6 +101,8 @@ fn impl_enumerable_for_unit_type(
             fn enumerator() -> Self::Enumerator {
                 std::iter::once(#value)
             }
+
+            const ENUMERABLE_SIZE: usize = 1;
         }
     )
 }
@@ -131,6 +133,8 @@ fn impl_enumerable_for_plain_enum<'a>(
 
                 return ALL_VARIANTS.iter().copied()
             }
+
+            const ENUMERABLE_SIZE: usize = #variants_count;
         }
     )
 }
@@ -538,6 +542,17 @@ fn impl_enumerable_for_struct(s: ItemStruct) -> TokenStream {
             fn enumerator() -> Self::Enumerator {
                 #enumerator_struct_ident::new()
             }
+
+            const ENUMERABLE_SIZE: usize = {
+                let size: usize = 1;
+                #(
+                    let size: usize = match size.checked_mul(<#field_types as Enumerable>::ENUMERABLE_SIZE) {
+                        Some(value) => value,
+                        None => panic!("ENUMERABLE_SIZE exceeds usize::MAX"),
+                    };
+                )*
+                size
+            };
         }
 
         #[doc(hidden)]
