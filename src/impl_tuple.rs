@@ -16,8 +16,6 @@ impl Enumerable for () {
     fn enumerator() -> Self::Enumerator {
         std::iter::once(())
     }
-
-    const ENUMERABLE_SIZE: usize = 1;
 }
 
 /// Enumerator for `(A,)`.
@@ -47,8 +45,6 @@ where
             a_enumerator: A::enumerator(),
         }
     }
-
-    const ENUMERABLE_SIZE: usize = A::ENUMERABLE_SIZE;
 }
 
 /// This macro generates a fragment of the body of the `calculate_next` method for a tuple enumerator.
@@ -199,17 +195,6 @@ macro_rules! impl_enumerable_for_tuple {
                 fn enumerator() -> Self::Enumerator {
                     Self::Enumerator::new()
                 }
-
-                const ENUMERABLE_SIZE: usize = {
-                    let size = 1usize;
-                    $(
-                        let size: usize = match size.checked_mul($gen::ENUMERABLE_SIZE) {
-                            Some(size) => size,
-                            None => panic!("ENUMERABLE_SIZE exceeds usize::MAX"),
-                        };
-                    )+
-                    size
-                };
             }
         }
     };

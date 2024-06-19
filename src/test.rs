@@ -62,8 +62,6 @@ mod utils {
 use utils::*;
 
 fn assert_enumerator_eq<T: Enumerable + Debug + PartialEq>(expected: impl IntoIterator<Item = T>) {
-    let expected = Vec::from_iter(expected);
-    assert_eq!(T::ENUMERABLE_SIZE, expected.len());
     let mut expected_iter = expected.into_iter();
     let mut actual_iter = T::enumerator();
 
@@ -231,12 +229,4 @@ fn test_structs() {
         StructTuple2(Enum3::C, Enum4::Y),
         StructTuple2(Enum3::C, Enum4::Z),
     ]);
-}
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Enumerable)]
-struct UnitStruct;
-
-#[test]
-fn test_derive_unit_struct() {
-    assert_eq!(collect_all::<UnitStruct>(), vec![UnitStruct]);
 }

@@ -92,23 +92,6 @@ pub trait Enumerable: Copy {
     type Enumerator: Iterator<Item = Self>;
     /// Return an iterator over all possible values of the implementing type.
     fn enumerator() -> Self::Enumerator;
-    /// The number of elements in this enumerable.
-    /// If the number exceeds the `usize::MAX`, accessing this constant fails at compile time.
-    ///
-    /// ## Example
-    ///
-    /// ```
-    /// use enumerable::Enumerable;
-    /// let array = [0; u8::ENUMERABLE_SIZE];
-    /// ```
-    ///
-    /// This fails to compile:
-    ///
-    /// ```compile_fail
-    /// use enumerable::Enumerable;
-    /// let array = [0; <(usize, usize)>::ENUMERABLE_SIZE];
-    /// ```
-    const ENUMERABLE_SIZE: usize;
 }
 
 /// Macro to implement the `Enumerable` trait for a numeric type.
@@ -122,21 +105,6 @@ macro_rules! impl_enumerable_for_numeric_type {
             fn enumerator() -> Self::Enumerator {
                 <$ty>::MIN..=<$ty>::MAX
             }
-
-            const ENUMERABLE_SIZE: usize =
-                if std::mem::size_of::<$ty>() < std::mem::size_of::<usize>() {
-                    match (<$ty>::MAX.abs_diff(<$ty>::MIN) as usize).checked_add(1) {
-                        Some(size) => size,
-                        None => {
-                            unreachable!()
-                        }
-                    }
-                } else {
-                    panic!(concat!(
-                        stringify!($ty),
-                        "::ENUMERABLE_SIZE exceeds usize::MAX"
-                    ))
-                };
         }
     };
 }
@@ -223,8 +191,6 @@ impl Enumerable for bool {
     fn enumerator() -> Self::Enumerator {
         BoolEnumerator::new()
     }
-
-    const ENUMERABLE_SIZE: usize = 2;
 }
 
 /// This is an implementation of the `Enumerable` trait for `char`.
@@ -244,8 +210,6 @@ impl Enumerable for char {
     fn enumerator() -> Self::Enumerator {
         ('\u{0}'..='\u{D7FF}').chain('\u{E000}'..='\u{10FFFF}')
     }
-
-    const ENUMERABLE_SIZE: usize = 0x10FFFF + 1;
 }
 
 /// `OptionEnumerator` is an iterator over possible values of `Option<T>`.
@@ -300,8 +264,6 @@ where
     fn enumerator() -> Self::Enumerator {
         OptionEnumerator::new()
     }
-
-    const ENUMERABLE_SIZE: usize = T::ENUMERABLE_SIZE + 1;
 }
 
 /// Implementation of the `Enumerable` trait for `Result<T, E>`, with std::iter::Chain and std::iter::Map.
@@ -324,8 +286,6 @@ where
             .map(t)
             .chain(<E as Enumerable>::enumerator().map(e))
     }
-
-    const ENUMERABLE_SIZE: usize = T::ENUMERABLE_SIZE + E::ENUMERABLE_SIZE;
 }
 
 pub use enumerable_derive::*;
