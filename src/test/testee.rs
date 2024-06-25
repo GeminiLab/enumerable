@@ -49,8 +49,3 @@ pub enum ComplexEnum {
     EmptyBranch(Enum0),
     UnnamedFieldAfterEmpty { e3: Enum3 },
 }
-
-#[allow(dead_code)]
-pub fn collect_all<T: Enumerable>() -> Vec<T> {
-    T::enumerator().collect()
-}
