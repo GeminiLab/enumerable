@@ -555,7 +555,7 @@ fn impl_enumerable_for_struct(s: ItemStruct) -> TokenStream {
             const ENUMERABLE_SIZE_OPTION: Option<usize> = {
                 let size: Option<usize> = Some(1usize);
                 #(
-                    let size: Option<usize> = match (size, <#field_types as Enumerable>::ENUMERABLE_SIZE_OPTION) {
+                    let size: Option<usize> = match (size, <#field_types as #enumerable_trait_path>::ENUMERABLE_SIZE_OPTION) {
                         (Some(size), Some(size_field)) => size.checked_mul(size_field),
                         _ => None,
                     };
