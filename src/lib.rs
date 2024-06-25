@@ -173,75 +173,15 @@ macro_rules! impl_enumerable_for_numeric_types {
 // Implement the `Enumerable` trait for all standard numeric types.
 impl_enumerable_for_numeric_types!(u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize);
 
-/// `BoolEnumeratorState` is an enum that represents the state of a `BoolEnumerator`.
-/// It has three variants: `False`, `True`, and `Done`.
-/// `False` means that the next item to yield is `false`.
-/// `True` means that the next item to yield is `true`.
-/// `Done` means that all items have been yielded.
-enum BoolEnumeratorState {
-    False,
-    True,
-    Done,
-}
-
-/// `BoolEnumerator` is the iterator over `false` and `true`.
-pub struct BoolEnumerator {
-    state: BoolEnumeratorState,
-}
-
-impl BoolEnumerator {
-    /// Creates a new `BoolEnumerator`.
-    fn new() -> Self {
-        Self {
-            state: BoolEnumeratorState::False,
-        }
-    }
-}
-
-/// This is an implementation of the `Iterator` trait for `BoolEnumerator`.
-impl Iterator for BoolEnumerator {
-    type Item = bool;
-
-    /// Returns the next item from the `BoolEnumerator`.
-    ///
-    /// # Returns
-    ///
-    /// If the current state is `False`, sets the state to `True` and returns `Some(false)`.
-    /// If the current state is `True`, sets the state to `Done` and returns `Some(true)`.
-    /// If the current state is `Done`, returns `None`.
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.state {
-            BoolEnumeratorState::False => {
-                self.state = BoolEnumeratorState::True;
-                Some(false)
-            }
-            BoolEnumeratorState::True => {
-                self.state = BoolEnumeratorState::Done;
-                Some(true)
-            }
-            _ => None,
-        }
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        match self.state {
-            BoolEnumeratorState::False => (2, Some(2)),
-            BoolEnumeratorState::True => (1, Some(1)),
-            BoolEnumeratorState::Done => (0, Some(0)),
-        }
-    }
-}
-
-impl ExactSizeIterator for BoolEnumerator {}
-
 /// This is an implementation of the `Enumerable` trait for `bool`.
 impl Enumerable for bool {
-    type Enumerator = BoolEnumerator;
+    type Enumerator = std::iter::Copied<std::slice::Iter<'static, bool>>;
 
     /// This method returns an iterator over all possible values of `bool`.
-    /// It creates a new `BoolEnumerator`.
     fn enumerator() -> Self::Enumerator {
-        BoolEnumerator::new()
+        const ALL_VARIANTS: &[bool; 2] = &[false, true];
+
+        return ALL_VARIANTS.iter().copied();
     }
 
     const ENUMERABLE_SIZE_OPTION: Option<usize> = Some(2);
