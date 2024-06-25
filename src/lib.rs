@@ -92,8 +92,23 @@ pub trait Enumerable: Copy {
     type Enumerator: Iterator<Item = Self>;
     /// Return an iterator over all possible values of the implementing type.
     fn enumerator() -> Self::Enumerator;
+
+    /// The number of elements in this enumerable wrapped in `Option::Some` if it does not exceed `usize::MAX`, `None` otherwise.
+    ///
+    /// If a `usize` without any wrapper is preferred, use `ENUMERABLE_SIZE` instead.
+    ///
+    /// ## Example
+    ///
+    /// ```
+    /// use enumerable::Enumerable;
+    /// assert_eq!(u8::ENUMERABLE_SIZE_OPTION, Some(256usize));
+    /// assert_eq!(<(usize, usize)>::ENUMERABLE_SIZE_OPTION, None);
+    /// ```
+    const ENUMERABLE_SIZE_OPTION: Option<usize>;
     /// The number of elements in this enumerable.
     /// If the number exceeds the `usize::MAX`, accessing this constant fails at compile time.
+    ///
+    /// It's generally unnecessary to provide this constant manually, as a default value is provided using `ENUMERABLE_SIZE_OPTION`.
     ///
     /// ## Example
     ///
@@ -108,7 +123,14 @@ pub trait Enumerable: Copy {
     /// use enumerable::Enumerable;
     /// let array = [0; <(usize, usize)>::ENUMERABLE_SIZE];
     /// ```
-    const ENUMERABLE_SIZE: usize;
+    const ENUMERABLE_SIZE: usize = {
+        match Self::ENUMERABLE_SIZE_OPTION {
+            Some(size) => size,
+            None => {
+                panic!("cannot evaluate Enumerable::ENUMERABLE_SIZE because it exceeds usize::MAX")
+            }
+        }
+    };
 }
 
 /// Macro to implement the `Enumerable` trait for a numeric type.
@@ -123,20 +145,18 @@ macro_rules! impl_enumerable_for_numeric_type {
                 <$ty>::MIN..=<$ty>::MAX
             }
 
-            const ENUMERABLE_SIZE: usize =
+            const ENUMERABLE_SIZE_OPTION: Option<usize> = {
                 if std::mem::size_of::<$ty>() < std::mem::size_of::<usize>() {
                     match (<$ty>::MAX.abs_diff(<$ty>::MIN) as usize).checked_add(1) {
-                        Some(size) => size,
+                        Some(size) => Some(size),
                         None => {
                             unreachable!()
                         }
                     }
                 } else {
-                    panic!(concat!(
-                        stringify!($ty),
-                        "::ENUMERABLE_SIZE exceeds usize::MAX"
-                    ))
-                };
+                    None
+                }
+            };
         }
     };
 }
@@ -224,7 +244,7 @@ impl Enumerable for bool {
         BoolEnumerator::new()
     }
 
-    const ENUMERABLE_SIZE: usize = 2;
+    const ENUMERABLE_SIZE_OPTION: Option<usize> = Some(2);
 }
 
 /// This is an implementation of the `Enumerable` trait for `char`.
@@ -245,7 +265,8 @@ impl Enumerable for char {
         ('\u{0}'..='\u{D7FF}').chain('\u{E000}'..='\u{10FFFF}')
     }
 
-    const ENUMERABLE_SIZE: usize = 0x10FFFF + 1;
+    const ENUMERABLE_SIZE_OPTION: Option<usize> =
+        Some((0xD7FF - 0x0 + 1) + (0x10FFFF - 0xE000 + 1));
 }
 
 /// `OptionEnumerator` is an iterator over possible values of `Option<T>`.
@@ -301,7 +322,12 @@ where
         OptionEnumerator::new()
     }
 
-    const ENUMERABLE_SIZE: usize = T::ENUMERABLE_SIZE + 1;
+    const ENUMERABLE_SIZE_OPTION: Option<usize> = {
+        match <T as Enumerable>::ENUMERABLE_SIZE_OPTION {
+            Some(size) => size.checked_add(1),
+            None => None,
+        }
+    };
 }
 
 /// Implementation of the `Enumerable` trait for `Result<T, E>`, with std::iter::Chain and std::iter::Map.
@@ -325,7 +351,15 @@ where
             .chain(<E as Enumerable>::enumerator().map(e))
     }
 
-    const ENUMERABLE_SIZE: usize = T::ENUMERABLE_SIZE + E::ENUMERABLE_SIZE;
+    const ENUMERABLE_SIZE_OPTION: Option<usize> = {
+        match (
+            <T as Enumerable>::ENUMERABLE_SIZE_OPTION,
+            <E as Enumerable>::ENUMERABLE_SIZE_OPTION,
+        ) {
+            (Some(t), Some(e)) => t.checked_add(e),
+            _ => None,
+        }
+    };
 }
 
 pub use enumerable_derive::*;

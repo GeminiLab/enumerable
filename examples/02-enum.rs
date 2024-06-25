@@ -19,7 +19,10 @@ enum OtherEnum {
 }
 
 pub fn main() {
-    println!("printing all possible values of SomeEnum:");
+    println!(
+        "printing all possible values of SomeEnum ({} in total):",
+        <SomeEnum as Enumerable>::ENUMERABLE_SIZE
+    );
     for value in SomeEnum::enumerator() {
         println!("{:?}", value);
     }

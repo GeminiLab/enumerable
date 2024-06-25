@@ -4,7 +4,7 @@ use proc_macro_crate::{crate_name, FoundCrate};
 use quote::{format_ident, quote, quote_spanned, TokenStreamExt};
 use syn::{
     spanned::Spanned, Attribute, Expr, ExprLit, Field, Fields, Item, ItemEnum, ItemStruct, Lit,
-    Meta, MetaNameValue,
+    LitInt, Meta, MetaNameValue,
 };
 
 /// Generates the default name for the enumerator of a type by its name.
@@ -81,6 +81,8 @@ fn impl_enumerable_for_empty_type(
         impl #enumerable_trait_path for #ident {
             type Enumerator = std::iter::Empty<Self>;
 
+            const ENUMERABLE_SIZE_OPTION: Option<usize> = Some(0usize);
+
             fn enumerator() -> Self::Enumerator {
                 std::iter::empty()
             }
@@ -102,7 +104,7 @@ fn impl_enumerable_for_unit_type(
                 std::iter::once(#value)
             }
 
-            const ENUMERABLE_SIZE: usize = 1;
+            const ENUMERABLE_SIZE_OPTION: Option<usize> = Some(1usize);
         }
     )
 }
@@ -123,6 +125,9 @@ fn impl_enumerable_for_plain_enum<'a>(
         return impl_enumerable_for_empty_type(ident, enumerable_trait_path);
     }
 
+    let vars_count_usize_lit_str = format!("{}usize", vars_count);
+    let vars_count_usize_lit = LitInt::new(&vars_count_usize_lit_str, Span::call_site());
+
     quote!(
         #[automatically_derived]
         impl #enumerable_trait_path for #ident {
@@ -134,7 +139,26 @@ fn impl_enumerable_for_plain_enum<'a>(
                 return ALL_VARIANTS.iter().copied()
             }
 
-            const ENUMERABLE_SIZE: usize = #variants_count;
+            const ENUMERABLE_SIZE_OPTION: Option<usize> = Some(#vars_count_usize_lit);
+        }
+    )
+}
+
+/// Generates the code fragment which calculates the size of the enumerable type.
+fn get_enumerable_size_option_multiplication(
+    types: &Vec<TokenStream>,
+    enumerable_trait_path: &TokenStream,
+) -> TokenStream {
+    quote!(
+        {
+            let size: Option<usize> = Some(1usize);
+            #(
+                let size: Option<usize> = match (size, <#types as #enumerable_trait_path>::ENUMERABLE_SIZE_OPTION) {
+                    (Some(size), Some(size_field)) => size.checked_mul(size_field),
+                    _ => None,
+                };
+            )*
+            size
         }
     )
 }
@@ -307,6 +331,9 @@ fn impl_enumerable_for_enum(e: ItemEnum) -> TokenStream {
     let mut enumerator_variants = TokenStream::new();
     let mut calculate_next_match_branches = TokenStream::new();
     let mut get_calculated_next_match_branches = TokenStream::new();
+    let mut enumerable_size_option_evaluator = quote!(
+        let size: Option<usize> = Some(0usize);
+    );
 
     let enumerator_variant_name_before = |variant: &Ident| format_ident!("Before{}", variant);
     let enumerator_variant_name_in = |variant: &Ident| format_ident!("In{}", variant);
@@ -401,6 +428,16 @@ fn impl_enumerable_for_enum(e: ItemEnum) -> TokenStream {
                 Some(#ident::#var_ident #binder)
             },
         ));
+
+        let enumerator_size_option =
+            get_enumerable_size_option_multiplication(&field_types, &enumerable_trait_path);
+        enumerable_size_option_evaluator.append_all(quote!(
+            let branch_size = #enumerator_size_option;
+            let size = match (size, branch_size) {
+                (Some(size), Some(branch_size)) => size.checked_add(branch_size),
+                _ => None,
+            };
+        ));
     }
 
     quote!(
@@ -411,6 +448,11 @@ fn impl_enumerable_for_enum(e: ItemEnum) -> TokenStream {
             fn enumerator() -> Self::Enumerator {
                 #enumerator_ident::new()
             }
+
+            const ENUMERABLE_SIZE_OPTION: Option<usize> = {
+                #enumerable_size_option_evaluator
+                size
+            };
         }
 
         #[doc(hidden)]
@@ -533,6 +575,8 @@ fn impl_enumerable_for_struct(s: ItemStruct) -> TokenStream {
             calculated_next,
         }
     );
+    let enumerator_size_option =
+        get_enumerable_size_option_multiplication(&field_types, &enumerable_trait_path);
 
     let result = quote!(
         #[automatically_derived]
@@ -543,16 +587,7 @@ fn impl_enumerable_for_struct(s: ItemStruct) -> TokenStream {
                 #enumerator_struct_ident::new()
             }
 
-            const ENUMERABLE_SIZE: usize = {
-                let size: usize = 1;
-                #(
-                    let size: usize = match size.checked_mul(<#field_types as Enumerable>::ENUMERABLE_SIZE) {
-                        Some(value) => value,
-                        None => panic!("ENUMERABLE_SIZE exceeds usize::MAX"),
-                    };
-                )*
-                size
-            };
+            const ENUMERABLE_SIZE_OPTION: Option<usize> = #enumerator_size_option;
         }
 
         #[doc(hidden)]

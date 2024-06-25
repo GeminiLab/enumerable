@@ -154,7 +154,8 @@ fn test_enum_derive_complex() {
     assert_enumerator_eq(expected);
 
     // Checks whether the custom enumerator name is used.
-    let _: ComplexEnumerator = ComplexEnum::enumerator();
+    let e: ComplexEnumerator = ComplexEnum::enumerator();
+    assert_eq!(ComplexEnum::ENUMERABLE_SIZE, e.count());
 }
 
 #[test]
