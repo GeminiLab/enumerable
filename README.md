@@ -2,9 +2,9 @@
 
 > Enumerate all possible values of a type.
 
-See the [documentation](https://docs.rs/enumerable) for more information.
-
 See the [examples](./examples) for more examples and a guide on how to use the crate.
+
+See the [documentation](https://docs.rs/enumerable) for detailed information on the crate.
 
 ## TL;DR
 
@@ -12,6 +12,7 @@ See the [examples](./examples) for more examples and a guide on how to use the c
 use enumerable::Enumerable;
 
 #[derive(Debug, Copy, Clone, Enumerable)]
+#[allow(dead_code)]
 enum Food {
     Apple,
     Banana,

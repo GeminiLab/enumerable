@@ -13,17 +13,17 @@ mod primitive {
     fn test_bool() {
         assert_enumerator_eq_with_size_hint(vec![false, true]);
     }
-    
+
     #[test]
     fn test_option_bool() {
         assert_enumerator_eq(vec![None, Some(false), Some(true)]);
     }
-    
+
     #[test]
     fn test_result_bool_bool() {
         assert_enumerator_eq_with_size_hint(vec![Ok(false), Ok(true), Err(false), Err(true)]);
     }
-    
+
     #[test]
     fn test_primitive_numeric() {
         assert_enumerator_eq_with_size_hint(u8::MIN..=u8::MAX);
@@ -36,7 +36,7 @@ mod primitive {
            assert_enumerator_eq(u32::MIN..=u32::MAX);
         */
     }
-    
+
     #[test]
     fn test_char() {
         assert_eq!(char::enumerator().skip(0x61).next(), Some('\u{61}'));
@@ -127,7 +127,9 @@ mod tuple {
         );
 
         // Verify that the enumerator returns all possible values.
-        assert_enumerator_eq((0u8..=0xff).flat_map(|a| [false, true].into_iter().map(move |b| (a, b))));
+        assert_enumerator_eq(
+            (0u8..=0xff).flat_map(|a| [false, true].into_iter().map(move |b| (a, b))),
+        );
     }
 
     #[test]

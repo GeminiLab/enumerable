@@ -1,4 +1,3 @@
-
 use crate::Enumerable;
 
 #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Enumerable)]

@@ -1,3 +1,4 @@
+#![doc = include_str!("./CRATE_DOC.md")]
 
 /// `Enumerable` is a trait for types that can have their possible values enumerated.
 ///
@@ -134,9 +135,9 @@ pub trait Enumerable: Copy {
 mod impl_built_in;
 mod impl_tuple;
 
+pub use enumerable_derive::*;
 pub use impl_built_in::*;
 pub use impl_tuple::*;
-pub use enumerable_derive::*;
 
 #[cfg(test)]
 mod test;

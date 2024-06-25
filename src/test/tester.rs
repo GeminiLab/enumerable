@@ -2,7 +2,9 @@ use crate::Enumerable;
 use std::{cmp::PartialEq, fmt::Debug};
 
 /// Assert enumerator yields all elements in order.
-pub fn assert_enumerator_eq<T: Enumerable + Debug + PartialEq>(expected: impl IntoIterator<Item = T>) {
+pub fn assert_enumerator_eq<T: Enumerable + Debug + PartialEq>(
+    expected: impl IntoIterator<Item = T>,
+) {
     let expected = Vec::from_iter(expected);
     assert_eq!(T::ENUMERABLE_SIZE, expected.len());
     let mut expected_iter = expected.into_iter();
