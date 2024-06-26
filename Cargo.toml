@@ -1,11 +1,12 @@
 [workspace]
 members = ["enumerable_derive"]
+exclude = ["examples"]
 
 [workspace.package]
 authors = [ "aarkegz <aarkegz@gmail.com>" ]
 license = "MIT"
 edition = "2021"
-version = "0.3.0"
+version = "1.0.0-rc.0"
 repository = "https://github.com/GeminiLab/enumerable/"
 include = [
     "README.md",
@@ -28,4 +29,5 @@ include.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-enumerable_derive = { path = "enumerable_derive", version = "=0.3.0" }
+enumerable_derive = { path = "enumerable_derive", version = "=1.0.0-rc.0" }
+paste = "1.0.15"

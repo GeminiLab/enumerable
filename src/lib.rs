@@ -1,23 +1,16 @@
-mod impl_tuple;
-pub use impl_tuple::*;
+#![doc = include_str!("./CRATE_DOC.md")]
 
 /// `Enumerable` is a trait for types that can have their possible values enumerated.
 ///
-/// ## Derivable
+/// ## Methods, Associated Types, and Associated Constants
 ///
-/// This trait can be derived using `#[derive(Enumerable)]` on:
-/// - Enums with no associated data.
-/// - Structs with fields that implement `Enumerable`.
-///
-/// It's NOT guaranteed that the derived implementation will return a specific type of [`Iterator`].
-/// Do NOT rely on the type of the iterator used by the derived implementation.
-///
-/// It's guaranteed that the derived implementation will yield all possible variants of the enum
-/// from the top to the bottom.
-///
-/// It's guaranteed that the derived implementation will yield all possible values of the struct
-/// in a lexicographic ordering based on the top-to-bottom declaration order of the struct’s members,
-/// as [`Ord`] does.
+/// - `fn enumerator() -> Self::Enumerator`: Returns an iterator over all possible values of the
+/// implementing type.
+/// - `type Enumerator`: The type of the iterator that will be returned by the `enumerator` method.
+/// - `const ENUMERABLE_SIZE_OPTION: Option<usize>`: The number of elements returned by
+/// `enumerator()`.
+/// - `const ENUMERABLE_SIZE: usize` (provided): Unwrapped version of `ENUMERABLE_SIZE_OPTION`,
+/// panics at compile time if the number of elements exceeds `usize::MAX`.
 ///
 /// ## Built-in Implementations
 ///
@@ -25,10 +18,70 @@ pub use impl_tuple::*;
 /// - `bool`: Yields `false` and then `true`.
 /// - Numeric types: Yields all possible values of the type from the minimum to the maximum one.
 /// - [`Option`]: Yields `None` and then `Some(item)` for each possible value of `T`.
-/// - [`Result`]: Yields `Ok(item)` for each possible value of `T` and `Err(error)` for each possible value of `E`.
-/// - `char`: Yields all possible Unicode scalar values from `U+0000` to `U+10FFFF`, excluding the surrogate code points.
-/// - Tuples: Yields all possible values of the tuple with 1 to 2 elements, in a lexicographic ordering, provided that all elements implement `Enumerable`.
+/// - [`Result`]: Yields `Ok(item)` for each possible value of `T` and then `Err(error)` for each
+/// possible value of `E`.
+/// - `char`: Yields all possible Unicode scalar values, i.e. all code points ranging from `U+0000`
+///  to `U+10FFFF`, excluding the surrogate code points (`U+D800` to `U+DFFF`).
+/// - Tuples: Yields all possible values of the tuple with 1 to 16 elements, in a lexicographic
+/// ordering (as `core::cmp::Ord` does), provided that all elements implement `Enumerable`.
 /// - `()`: Yields the unit value `()`.
+///
+/// ## Derivable
+///
+/// This trait can be derived using `#[derive(Enumerable)]` on structs and enums, if
+/// - they have no fields, or
+/// - all of their fields implement `Enumerable`.
+///
+/// Types with generic parameters are not supported yet.
+///
+/// See "Guarantees and Limitations" below for more information.
+///
+/// ### Customizing the Generated Enumerator
+///
+/// In most cases, `#[derive(Enumerable)]` will generate a new enumerator type named
+/// `<Type>Enumerator` that enumerates all possible values of the type to be derived `<Type>`. It's
+/// possible to customize the name of the generated type by using
+/// - `#[enumerator = "DesiredEnumeratorName"]`, or
+/// - `#[enumerator(DesiredEnumeratorName)]`,
+///
+/// they are equivalent.
+///
+/// `#[derive(Enumerable)]` will NOT generate an enumerator type when the type to be derived is
+/// - an enum with zero variants,
+/// - an enum with no fields, or
+/// - a struct with no fields,
+///
+/// in these cases, the custom enumerator name will be ignored.
+///
+/// ## Guarantees and Requirements
+///
+/// It is guaranteed that:
+/// - The derived implementations will enumerate over all possible variants of an enum in the order
+/// they are declared. The only exception is variants with fields of uninhabited types (e.g. empty
+/// enums), which will be skipped.
+/// - The derived implementations will yield all possible values of a struct (or a variant with some
+/// fields of an enum) in a lexicographic ordering based on the top-to-bottom declaration order of
+/// the fields, as built-in implementations for tuples do.
+///
+/// It is **NOT** guaranteed that:
+/// - The derived and the built-in implementations will return a specific type of [`Iterator`] as
+/// enumerators.
+///
+///   Do **NOT** rely on the specific type of the enumerator provided by an `Enumerable` type,
+/// unless you are using `#[enumerator(...)]` and knowing that `#[derive(Enumerable)]` will generate
+/// an enumerator type, use `<T as Enumerable>::Enumerator` instead in all other cases.
+///
+/// It is **REQUIRED** that if you are implementing `Enumerable` for a type manually, your
+/// enumerator should:
+/// - have a idempotent `enumerator()` method, i.e. calling it multiple times should return iterators
+/// that yield the same values in the same order.
+/// - have a `ENUMERABLE_SIZE_OPTION` constant that matches the number of elements returned by
+/// `enumerator()`.
+/// - use the default version of `ENUMERABLE_SIZE`, or provide a custom one that matches
+/// `ENUMERABLE_SIZE_OPTION`.
+///
+/// Failed to meet the requirements will result in unexpected behavior when interacting with the
+/// derived implementations.
 ///
 /// ## Example
 ///
@@ -50,243 +103,53 @@ pub trait Enumerable: Copy {
     type Enumerator: Iterator<Item = Self>;
     /// Return an iterator over all possible values of the implementing type.
     fn enumerator() -> Self::Enumerator;
-}
 
-/// Macro to implement the `Enumerable` trait for a numeric type.
-macro_rules! impl_enumerable_for_numeric_type {
-    ($ty:ty) => {
-        #[automatically_derived]
-        impl Enumerable for $ty {
-            type Enumerator = std::ops::RangeInclusive<$ty>;
-
-            /// Returns an iterator over all possible values of this type.
-            fn enumerator() -> Self::Enumerator {
-                <$ty>::MIN..=<$ty>::MAX
-            }
-        }
-    };
-}
-
-/// Macro to implement the `Enumerable` trait for multiple numeric types.
-macro_rules! impl_enumerable_for_numeric_types {
-    ($ty:ty) => { impl_enumerable_for_numeric_type!($ty); };
-    ($ty:ty, $($tys:ty),+) => {
-        impl_enumerable_for_numeric_type!($ty);
-        impl_enumerable_for_numeric_types!($($tys),+);
-    };
-}
-
-// Implement the `Enumerable` trait for all standard numeric types.
-impl_enumerable_for_numeric_types!(u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize);
-
-/// `BoolEnumeratorState` is an enum that represents the state of a `BoolEnumerator`.
-/// It has three variants: `False`, `True`, and `Done`.
-/// `False` means that the next item to yield is `false`.
-/// `True` means that the next item to yield is `true`.
-/// `Done` means that all items have been yielded.
-enum BoolEnumeratorState {
-    False,
-    True,
-    Done,
-}
-
-/// `BoolEnumerator` is the iterator over `false` and `true`.
-pub struct BoolEnumerator {
-    state: BoolEnumeratorState,
-}
-
-impl BoolEnumerator {
-    /// Creates a new `BoolEnumerator`.
-    fn new() -> Self {
-        Self {
-            state: BoolEnumeratorState::False,
-        }
-    }
-}
-
-/// This is an implementation of the `Iterator` trait for `BoolEnumerator`.
-impl Iterator for BoolEnumerator {
-    type Item = bool;
-
-    /// Returns the next item from the `BoolEnumerator`.
+    /// The number of elements in this enumerable wrapped in `Option::Some` if it does not exceed `usize::MAX`, `None` otherwise.
     ///
-    /// # Returns
-    ///
-    /// If the current state is `False`, sets the state to `True` and returns `Some(false)`.
-    /// If the current state is `True`, sets the state to `Done` and returns `Some(true)`.
-    /// If the current state is `Done`, returns `None`.
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.state {
-            BoolEnumeratorState::False => {
-                self.state = BoolEnumeratorState::True;
-                Some(false)
-            }
-            BoolEnumeratorState::True => {
-                self.state = BoolEnumeratorState::Done;
-                Some(true)
-            }
-            _ => None,
-        }
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        match self.state {
-            BoolEnumeratorState::False => (2, Some(2)),
-            BoolEnumeratorState::True => (1, Some(1)),
-            BoolEnumeratorState::Done => (0, Some(0)),
-        }
-    }
-}
-
-impl ExactSizeIterator for BoolEnumerator {}
-
-/// This is an implementation of the `Enumerable` trait for `bool`.
-impl Enumerable for bool {
-    type Enumerator = BoolEnumerator;
-
-    /// This method returns an iterator over all possible values of `bool`.
-    /// It creates a new `BoolEnumerator`.
-    fn enumerator() -> Self::Enumerator {
-        BoolEnumerator::new()
-    }
-}
-
-/// This is an implementation of the `Enumerable` trait for `char`.
-impl Enumerable for char {
-    type Enumerator =
-        std::iter::Chain<std::ops::RangeInclusive<char>, std::ops::RangeInclusive<char>>;
-
-    /// This method returns an iterator over all possible values of `char`, which is `U+0000` to
-    /// `U+10FFFF`, excluding the surrogate code points.
+    /// If a `usize` without any wrapper is preferred, use `ENUMERABLE_SIZE` instead.
     ///
     /// ## Example
+    ///
     /// ```
     /// use enumerable::Enumerable;
-    ///
-    /// assert_eq!(char::enumerator().skip(0x41).next(), Some('\u{41}'));
+    /// assert_eq!(u8::ENUMERABLE_SIZE_OPTION, Some(256usize));
+    /// assert_eq!(<(usize, usize)>::ENUMERABLE_SIZE_OPTION, None);
     /// ```
-    fn enumerator() -> Self::Enumerator {
-        ('\u{0}'..='\u{D7FF}').chain('\u{E000}'..='\u{10FFFF}')
-    }
-}
-
-/// `OptionEnumerator` is an iterator over possible values of `Option<T>`.
-/// It yields `None` first, then yields `Some(item)` for each possible value of `T`.
-pub struct OptionEnumerator<T: Enumerable> {
-    first: bool,
-    inner: <T as Enumerable>::Enumerator,
-}
-
-impl<T> OptionEnumerator<T>
-where
-    T: Enumerable,
-{
-    /// Creates a new `OptionEnumerator` that wraps the enumerator of `T`.
-    pub(crate) fn new() -> Self {
-        Self {
-            first: true,
-            inner: T::enumerator(),
-        }
-    }
-}
-
-/// This is an implementation of the `Iterator` trait for `Option<T>` where `T` is `Enumerable`.
-impl<T> Iterator for OptionEnumerator<T>
-where
-    T: Enumerable,
-{
-    type Item = Option<T>;
-
-    /// Returns the next item from the `OptionEnumerator`.
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.first {
-            self.first = false;
-            Some(None)
-        } else {
-            match self.inner.next() {
-                Some(item) => Some(Some(item)),
-                None => None,
+    const ENUMERABLE_SIZE_OPTION: Option<usize>;
+    /// The number of elements in this enumerable.
+    /// If the number exceeds the `usize::MAX`, accessing this constant fails at compile time.
+    ///
+    /// It's generally unnecessary to provide this constant manually, as a default value is provided using `ENUMERABLE_SIZE_OPTION`.
+    ///
+    /// ## Example
+    ///
+    /// ```
+    /// use enumerable::Enumerable;
+    /// let array = [0; u8::ENUMERABLE_SIZE];
+    /// ```
+    ///
+    /// This fails to compile:
+    ///
+    /// ```compile_fail
+    /// use enumerable::Enumerable;
+    /// let array = [0; <(usize, usize)>::ENUMERABLE_SIZE];
+    /// ```
+    const ENUMERABLE_SIZE: usize = {
+        match Self::ENUMERABLE_SIZE_OPTION {
+            Some(size) => size,
+            None => {
+                panic!("cannot evaluate Enumerable::ENUMERABLE_SIZE because it exceeds usize::MAX")
             }
         }
-    }
+    };
 }
 
-/// This is an implementation of the `Enumerable` trait for `Option<T>` where `T` is `Enumerable`.
-impl<T> Enumerable for Option<T>
-where
-    T: Enumerable,
-{
-    type Enumerator = OptionEnumerator<T>;
-
-    /// This method returns an iterator over all possible values of `Option<T>`.
-    fn enumerator() -> Self::Enumerator {
-        OptionEnumerator::new()
-    }
-}
-
-/// `ResultEnumerator` is an iterator over possible values of `Result<T, E>`.
-pub struct ResultEnumerator<T: Enumerable, E: Enumerable> {
-    over_results: bool,
-    results: <T as Enumerable>::Enumerator,
-    errors: <E as Enumerable>::Enumerator,
-}
-
-impl<T, E> ResultEnumerator<T, E>
-where
-    T: Enumerable,
-    E: Enumerable,
-{
-    /// Creates a new `ResultEnumerator` that wraps the enumerators of `T` and `E`.
-    pub(crate) fn new() -> Self {
-        Self {
-            over_results: true,
-            results: T::enumerator(),
-            errors: E::enumerator(),
-        }
-    }
-}
-
-impl<T, E> Iterator for ResultEnumerator<T, E>
-where
-    T: Enumerable,
-    E: Enumerable,
-{
-    type Item = Result<T, E>;
-
-    /// Returns the next item from the `ResultEnumerator`.
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.over_results {
-            match self.results.next() {
-                Some(result) => Some(Ok(result)),
-                None => {
-                    self.over_results = false;
-                    self.next()
-                }
-            }
-        } else {
-            match self.errors.next() {
-                Some(error) => Some(Err(error)),
-                None => None,
-            }
-        }
-    }
-}
-
-impl<T, E> Enumerable for Result<T, E>
-where
-    T: Enumerable,
-    E: Enumerable,
-{
-    type Enumerator = ResultEnumerator<T, E>;
-
-    /// This method returns an iterator over all possible values of `Result<T, E>`.
-    fn enumerator() -> Self::Enumerator {
-        ResultEnumerator::new()
-    }
-}
+mod impl_built_in;
+mod impl_tuple;
 
 pub use enumerable_derive::*;
+pub use impl_built_in::*;
+pub use impl_tuple::*;
 
 #[cfg(test)]
-#[path = "test.rs"]
 mod test;
