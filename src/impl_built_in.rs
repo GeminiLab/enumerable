@@ -5,7 +5,7 @@ macro_rules! impl_enumerable_for_numeric_type {
     ($ty:ty) => {
         #[automatically_derived]
         impl Enumerable for $ty {
-            type Enumerator = std::ops::RangeInclusive<$ty>;
+            type Enumerator = core::ops::RangeInclusive<$ty>;
 
             /// Returns an iterator over all possible values of this type.
             fn enumerator() -> Self::Enumerator {
@@ -13,7 +13,7 @@ macro_rules! impl_enumerable_for_numeric_type {
             }
 
             const ENUMERABLE_SIZE_OPTION: Option<usize> = {
-                if std::mem::size_of::<$ty>() < std::mem::size_of::<usize>() {
+                if core::mem::size_of::<$ty>() < core::mem::size_of::<usize>() {
                     match (<$ty>::MAX.abs_diff(<$ty>::MIN) as usize).checked_add(1) {
                         Some(size) => Some(size),
                         None => {
@@ -42,7 +42,7 @@ impl_enumerable_for_numeric_types!(u8, u16, u32, u64, u128, usize, i8, i16, i32,
 
 /// This is an implementation of the `Enumerable` trait for `bool`.
 impl Enumerable for bool {
-    type Enumerator = std::iter::Copied<std::slice::Iter<'static, bool>>;
+    type Enumerator = core::iter::Copied<core::slice::Iter<'static, bool>>;
 
     /// This method returns an iterator over all possible values of `bool`.
     fn enumerator() -> Self::Enumerator {
@@ -57,7 +57,7 @@ impl Enumerable for bool {
 /// This is an implementation of the `Enumerable` trait for `char`.
 impl Enumerable for char {
     type Enumerator =
-        std::iter::Chain<std::ops::RangeInclusive<char>, std::ops::RangeInclusive<char>>;
+        core::iter::Chain<core::ops::RangeInclusive<char>, core::ops::RangeInclusive<char>>;
 
     /// This method returns an iterator over all possible values of `char`, which is `U+0000` to
     /// `U+10FFFF`, excluding the surrogate code points.
@@ -137,15 +137,15 @@ where
     };
 }
 
-/// Implementation of the `Enumerable` trait for `Result<T, E>`, with std::iter::Chain and std::iter::Map.
+/// Implementation of the `Enumerable` trait for `Result<T, E>`, with core::iter::Chain and core::iter::Map.
 impl<T, E> Enumerable for Result<T, E>
 where
     T: Enumerable,
     E: Enumerable,
 {
-    type Enumerator = std::iter::Chain<
-        std::iter::Map<<T as Enumerable>::Enumerator, fn(T) -> Result<T, E>>,
-        std::iter::Map<<E as Enumerable>::Enumerator, fn(E) -> Result<T, E>>,
+    type Enumerator = core::iter::Chain<
+        core::iter::Map<<T as Enumerable>::Enumerator, fn(T) -> Result<T, E>>,
+        core::iter::Map<<E as Enumerable>::Enumerator, fn(E) -> Result<T, E>>,
     >;
 
     /// This method returns an iterator over all possible values of `Result<T, E>`.

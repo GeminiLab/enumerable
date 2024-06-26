@@ -79,12 +79,12 @@ fn impl_enumerable_for_empty_type(
 ) -> TokenStream {
     quote!(
         impl #enumerable_trait_path for #ident {
-            type Enumerator = std::iter::Empty<Self>;
+            type Enumerator = core::iter::Empty<Self>;
 
             const ENUMERABLE_SIZE_OPTION: Option<usize> = Some(0usize);
 
             fn enumerator() -> Self::Enumerator {
-                std::iter::empty()
+                core::iter::empty()
             }
         }
     )
@@ -98,10 +98,10 @@ fn impl_enumerable_for_unit_type(
 ) -> TokenStream {
     quote!(
         impl #enumerable_trait_path for #ident {
-            type Enumerator = std::iter::Once<Self>;
+            type Enumerator = core::iter::Once<Self>;
 
             fn enumerator() -> Self::Enumerator {
-                std::iter::once(#value)
+                core::iter::once(#value)
             }
 
             const ENUMERABLE_SIZE_OPTION: Option<usize> = Some(1usize);
@@ -131,7 +131,7 @@ fn impl_enumerable_for_plain_enum<'a>(
     quote!(
         #[automatically_derived]
         impl #enumerable_trait_path for #ident {
-            type Enumerator = std::iter::Copied<std::slice::Iter<'static, Self>>;
+            type Enumerator = core::iter::Copied<core::slice::Iter<'static, Self>>;
 
             fn enumerator() -> Self::Enumerator {
                 const ALL_VARIANTS: &[#ident; #vars_count] = &[#(#ident::#vars),*];

@@ -2,7 +2,7 @@ use crate::Enumerable;
 
 /// This is an implementation of the `Enumerable` trait for `()`.
 impl Enumerable for () {
-    type Enumerator = std::iter::Once<()>;
+    type Enumerator = core::iter::Once<()>;
 
     /// This method returns an iterator over all possible values of `()`.
     ///
@@ -14,7 +14,7 @@ impl Enumerable for () {
     /// assert_eq!(iter.next(), None);
     /// ```
     fn enumerator() -> Self::Enumerator {
-        std::iter::once(())
+        core::iter::once(())
     }
 
     const ENUMERABLE_SIZE_OPTION: Option<usize> = Some(1);
