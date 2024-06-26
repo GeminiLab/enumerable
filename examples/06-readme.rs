@@ -1,11 +1,11 @@
 use enumerable::Enumerable;
 
 #[derive(Debug, Copy, Clone, Enumerable)]
+#[allow(dead_code)]
 enum Food {
     Apple,
     Banana,
-    Carrot,
-    Donut,
+    Coffee { with_milk: bool },
 }
 
 #[derive(Debug, Copy, Clone, Enumerable)]
@@ -17,6 +17,10 @@ struct Meal {
 }
 
 fn main() {
+    println!(
+        "There are {} different meals, enumerated as follows:",
+        Meal::ENUMERABLE_SIZE
+    );
     for meal in Meal::enumerator() {
         println!("{:?}", meal);
     }

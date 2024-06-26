@@ -597,11 +597,12 @@ fn impl_enumerable_for_struct(s: ItemStruct) -> TokenStream {
         }
 
         impl #enumerator_struct_ident {
+            #[allow(unreachable_code, unused_variables, non_shorthand_field_patterns)]
             fn new() -> Self {
                 #enumerator_struct_creator
             }
 
-            #[allow(non_shorthand_field_patterns)]
+            #[allow(unreachable_code, unused_variables, non_shorthand_field_patterns)]
             fn calculate_next(&mut self) {
                 #(
                     let mut #enumerator_names = &mut self.#enumerator_names;
