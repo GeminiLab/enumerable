@@ -23,7 +23,7 @@
 /// - `char`: Yields all possible Unicode scalar values, i.e. all code points ranging from `U+0000`
 ///  to `U+10FFFF`, excluding the surrogate code points (`U+D800` to `U+DFFF`).
 /// - Tuples: Yields all possible values of the tuple with 1 to 16 elements, in a lexicographic
-/// ordering (as `std::cmp::Ord` does), provided that all elements implement `Enumerable`.
+/// ordering (as `core::cmp::Ord` does), provided that all elements implement `Enumerable`.
 /// - `()`: Yields the unit value `()`.
 ///
 /// ## Derivable

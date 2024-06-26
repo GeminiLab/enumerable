@@ -7,10 +7,12 @@
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/examples/example_crate/example/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/examples/example_crates/crate_alias/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/examples/example_crates/no_std/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/.idea/copilot/chatSessions" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
       <excludeFolder url="file://$MODULE_DIR$/examples/example_crate/example/target" />
       <excludeFolder url="file://$MODULE_DIR$/examples/example_crates/crate_alias/target" />
+      <excludeFolder url="file://$MODULE_DIR$/examples/example_crates/no_std/target" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
