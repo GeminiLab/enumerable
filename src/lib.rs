@@ -3,7 +3,7 @@
 /// `Enumerable` is a trait for types that can have their possible values enumerated.
 ///
 /// ## Methods, Associated Types, and Associated Constants
-/// 
+///
 /// - `fn enumerator() -> Self::Enumerator`: Returns an iterator over all possible values of the
 /// implementing type.
 /// - `type Enumerator`: The type of the iterator that will be returned by the `enumerator` method.
@@ -11,7 +11,7 @@
 /// `enumerator()`.
 /// - `const ENUMERABLE_SIZE: usize` (provided): Unwrapped version of `ENUMERABLE_SIZE_OPTION`,
 /// panics at compile time if the number of elements exceeds `usize::MAX`.
-/// 
+///
 /// ## Built-in Implementations
 ///
 /// The following types have built-in implementations of the `Enumerable` trait:
