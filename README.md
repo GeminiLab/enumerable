@@ -2,6 +2,10 @@
 
 > Enumerate all possible values of a type.
 
+[![Crates.io Version](https://img.shields.io/crates/v/enumerable)](https://crates.io/crates/enumerable)
+[![docs.rs](https://img.shields.io/docsrs/enumerable)](https://docs.rs/crate/enumerable/1.0.0)
+[![GitHub License](https://img.shields.io/github/license/GeminiLab/enumerable)](https://github.com/GeminiLab/enumerable/blob/dev/LICENSE)
+
 See the [examples](./examples) for more examples and a guide on how to use the crate.
 
 See the [documentation](https://docs.rs/enumerable) for detailed information on the crate.
