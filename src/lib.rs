@@ -2,15 +2,17 @@
 
 /// `Enumerable` is a trait for types that can have their possible values enumerated.
 ///
-/// ## Methods, Associated Types, and Associated Constants
+/// ## Important Items
 ///
-/// - `fn enumerator() -> Self::Enumerator`: Returns an iterator over all possible values of the
-/// implementing type.
-/// - `type Enumerator`: The type of the iterator that will be returned by the `enumerator` method.
-/// - `const ENUMERABLE_SIZE_OPTION: Option<usize>`: The number of elements returned by
-/// `enumerator()`.
-/// - `const ENUMERABLE_SIZE: usize` (provided): Unwrapped version of `ENUMERABLE_SIZE_OPTION`,
-/// panics at compile time if the number of elements exceeds `usize::MAX`.
+/// - [`fn enumerator() -> Self::Enumerator`](Enumerable::enumerator): Returns an iterator over all
+/// possible values of the implementing type.
+/// - [`const ENUMERABLE_SIZE_OPTION: Option<usize>`](Enumerable::ENUMERABLE_SIZE_OPTION): The
+/// number of possible values of the implementing type, wrapped in `Some`, or `None` if it exceeds
+/// [`usize::MAX`].
+/// - [`fn enumerable_from_index(index: usize) -> Option<Self>`](Enumerable::enumerable_from_index):
+/// Returns the `index`-th possible value of the implementing type to be enumerated.
+///
+/// For other items, see sections below.
 ///
 /// ## Built-in Implementations
 ///
@@ -73,9 +75,9 @@
 ///
 /// It is **REQUIRED** that if you are implementing `Enumerable` for a type manually, your
 /// enumerator should:
-/// - have a idempotent `enumerator()` method, i.e. calling it multiple times should return iterators
-/// that yield the same values in the same order.
-/// - have a `ENUMERABLE_SIZE_OPTION` constant that matches the number of elements returned by
+/// - have an idempotent `enumerator()` method, i.e. calling it multiple times should return
+/// iterators that yield the same values in the same order.
+/// - have an `ENUMERABLE_SIZE_OPTION` constant that matches the number of elements returned by
 /// `enumerator()`.
 /// - use the default version of `ENUMERABLE_SIZE`, or provide a custom one that matches
 /// `ENUMERABLE_SIZE_OPTION`.
@@ -102,29 +104,44 @@ pub trait Enumerable: Copy {
     /// The type of the iterator that will be returned by the `enumerator` method.
     type Enumerator: Iterator<Item = Self>;
     /// Return an iterator over all possible values of the implementing type.
-    fn enumerator() -> Self::Enumerator;
-
-    /// The number of elements in this enumerable wrapped in `Option::Some` if it does not exceed `usize::MAX`, `None` otherwise.
     ///
-    /// If a `usize` without any wrapper is preferred, use `ENUMERABLE_SIZE` instead.
-    ///
-    /// ## Example
+    /// # Example
     ///
     /// ```
     /// use enumerable::Enumerable;
+    ///
+    /// let mut enumerator = u8::enumerator();
+    /// assert_eq!(enumerator.next(), Some(0)); // 0 is the first value
+    /// assert_eq!(enumerator.count(), 255);    // 255 more values to go
+    /// ```
+    fn enumerator() -> Self::Enumerator;
+
+    /// The number of possible values of the implementing type (i.e. the result of
+    /// `Self::enumerator().count()`), wrapped in `Some`, or `None` if it exceeds [`usize::MAX`].
+    ///
+    /// If a `usize` without any wrapper is preferred, use
+    /// [`ENUMERABLE_SIZE`](Self::ENUMERABLE_SIZE) instead.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use enumerable::Enumerable;
+    ///
     /// assert_eq!(u8::ENUMERABLE_SIZE_OPTION, Some(256usize));
     /// assert_eq!(<(usize, usize)>::ENUMERABLE_SIZE_OPTION, None);
     /// ```
     const ENUMERABLE_SIZE_OPTION: Option<usize>;
-    /// The number of elements in this enumerable.
-    /// If the number exceeds the `usize::MAX`, accessing this constant fails at compile time.
+    /// The number of possible values of the implementing type (i.e. the result of
+    /// `Self::enumerator().count()`). Panics at compile time if it exceeds [`usize::MAX`].
     ///
-    /// It's generally unnecessary to provide this constant manually, as a default value is provided using `ENUMERABLE_SIZE_OPTION`.
+    /// It's generally unnecessary to provide this constant manually, as a default value is provided
+    /// using [`ENUMERABLE_SIZE_OPTION`](Self::ENUMERABLE_SIZE_OPTION).
     ///
-    /// ## Example
+    /// # Example
     ///
     /// ```
     /// use enumerable::Enumerable;
+    ///
     /// let array = [0; u8::ENUMERABLE_SIZE];
     /// ```
     ///
@@ -132,6 +149,7 @@ pub trait Enumerable: Copy {
     ///
     /// ```compile_fail
     /// use enumerable::Enumerable;
+    ///
     /// let array = [0; <(usize, usize)>::ENUMERABLE_SIZE];
     /// ```
     const ENUMERABLE_SIZE: usize = {
@@ -142,6 +160,46 @@ pub trait Enumerable: Copy {
             }
         }
     };
+
+    /// Returns an iterator over all possible values of the implementing type starting from the
+    /// `start`-th (0-based) value.
+    ///
+    /// It's highly **RECOMMENDED** to override this default implementation whenever possible, as it
+    /// is not efficient for most types.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use enumerable::Enumerable;
+    ///
+    /// let mut enumerator = u8::enumerator_since(10);
+    /// assert_eq!(enumerator.next(), Some(10));
+    /// assert_eq!(enumerator.next(), Some(11));
+    /// ```
+    fn enumerator_since(start: usize) -> Self::Enumerator {
+        let mut enumerator = Self::enumerator();
+        for _ in 0..start {
+            enumerator.next();
+        }
+        enumerator
+    }
+
+    /// Returns the `index`-th possible value of the implementing type to be enumerated.
+    ///
+    /// Like [`enumerator_since`](Enumerable::enumerator_since), it's highly **RECOMMENDED** to
+    /// override this default implementation whenever possible.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use enumerable::Enumerable;
+    ///
+    /// let value = u8::enumerable_from_index(10);
+    /// assert_eq!(value, Some(10));
+    /// ```
+    fn enumerable_from_index(index: usize) -> Option<Self> {
+        Self::enumerator_since(index).next()
+    }
 }
 
 mod impl_built_in;
