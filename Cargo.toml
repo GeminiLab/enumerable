@@ -26,6 +26,10 @@ version.workspace = true
 repository.workspace = true
 include.workspace = true
 
+[features]
+default = ["std"]
+std = ["enumerable_derive/std"]
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
