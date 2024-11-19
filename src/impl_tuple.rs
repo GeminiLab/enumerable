@@ -21,6 +21,7 @@ impl Enumerable for () {
 }
 
 /// Enumerator for `(A,)`.
+#[doc(hidden)]
 pub struct Tuple1Enumerator<A>
 where
     A: Enumerable,
@@ -133,6 +134,7 @@ macro_rules! impl_enumerable_for_tuple {
     ($count:literal, $($gen:ident),+) => {
         paste::paste! {
             #[doc = "Enumerator for tuples with " $count " elements."]
+            #[doc(hidden)]
             pub struct [< Tuple $count Enumerator >]<$($gen),+>
             where
                 $($gen: Enumerable,)+
