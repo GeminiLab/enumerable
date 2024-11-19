@@ -10,6 +10,7 @@ enum FieldA {
 }
 
 #[derive(Copy, Clone, Enumerable, Debug)]
+#[allow(dead_code)]
 enum FieldB {
     X,
     Y(bool),
