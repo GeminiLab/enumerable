@@ -72,6 +72,7 @@ impl Target {
         })
     }
 
+    #[allow(dead_code)]
     /// Creates a new [`Target`] for any type.
     pub fn new_for_any(target: impl Into<TokenStream>, enumerator_type: TokenStream, vis: Visibility) -> Result<Self, TokenStream> {
         let enumerable_trait_path = get_enumerable_trait_path()?;

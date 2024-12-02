@@ -6,11 +6,11 @@ use quote::{format_ident, quote, quote_spanned, TokenStreamExt};
 use syn::{spanned::Spanned, Field, Fields, Item, ItemEnum, ItemStruct};
 
 mod code_gen;
-mod context;
+mod targets;
 mod size_option;
 
-use code_gen::enumerable_impl;
-use context::Target;
+use code_gen::{enumerable_impl, enumerable_impl_with_enumerator, EnumeratorInfo, EnumeratorKeyword};
+use targets::Target;
 use size_option::SizeOption;
 
 /// Implements the `Enumerable` trait for an empty type.
@@ -152,7 +152,13 @@ fn generate_step_for_fields<'a>(fields: impl Iterator<Item = &'a FieldToEnumerat
         );
     }
 
-    result
+    quote!(
+        // unreachable_patterns and unreachable_code will be triggered on uninhabited fields
+        #[allow(unreachable_patterns, unreachable_code)]
+        {
+            #result
+        }
+    )
 }
 
 /// Generate the code fragment which initializes the enumerators of the fields to be able to start the enumeration, and store the first values of the fields to yield.
@@ -173,6 +179,10 @@ fn generate_init_for_fields<'a>(fields: impl Iterator<Item = &'a FieldToEnumerat
             let #field_refs = #enumerator_refs.next();
         )*
 
+        // unreachable_patterns will be triggered on uninhabited fields
+        #[allow(unreachable_patterns)]
+        // unused_parens will be triggered if there is only one field
+        #[allow(unused_parens)]
         match (#( #field_refs ),*) {
             ( #(Some(#field_refs)),* ) => {
                 #on_non_empty
@@ -201,12 +211,10 @@ fn enumerator_ref_naming(field: FieldNameOrIndex) -> Ident {
 /// Implements the `Enumerable` trait for an enum.
 fn impl_enumerable_for_enum(e: ItemEnum) -> Result<TokenStream, TokenStream> {
     let target = Target::new_for_enum(&e)?;
-    let vis = &e.vis;
     let ident = &e.ident;
     let variants = &e.variants;
 
     let enumerable_trait_path = target.enumerable_trait_path();
-    let enumerator_name = target.enumerator_type();
 
     // Call `impl_enumerable_for_empty_type` if the enum has no fields.
     //
@@ -310,64 +318,36 @@ fn impl_enumerable_for_enum(e: ItemEnum) -> Result<TokenStream, TokenStream> {
         ));
     }
 
+    enumerator_variants.append_all(quote!(#enumerator_variant_name_done,));
+
     let enumerable_size_option = SizeOption::from_sum(size_options.iter());
-
-    Ok(quote!(
-        #[automatically_derived]
-        impl #enumerable_trait_path for #ident {
-            type Enumerator = #enumerator_name;
-
-            fn enumerator() -> Self::Enumerator {
-                #enumerator_name::new()
-            }
-
-            const ENUMERABLE_SIZE_OPTION: Option<usize> = #enumerable_size_option;
-        }
-
-        #[doc(hidden)]
-        #vis enum #enumerator_name {
-            #enumerator_variants
-            #enumerator_variant_name_done,
-        }
-
-        #[automatically_derived]
-        impl Iterator for #enumerator_name {
-            type Item = #ident;
-
-            fn next(&mut self) -> Option<<Self as Iterator>::Item> {
-                let result = self.current();
-                self.step();
-                result
-            }
-        }
-
-        impl #enumerator_name {
-            fn new() -> Self {
-                let mut result = #enumerator_name::#first_enumerator_variant;
-                result.step();
-                result
-            }
-
-            #[allow(unreachable_code, unused_variables, non_shorthand_field_patterns)]
-            fn step(&mut self) {
-                loop {
-                    match self {
-                        #step_match_branches
-                        _ => *self = Self::#enumerator_variant_name_done,
-                    }
-
-                    break;
-                }
-            }
-
-            fn current(&mut self) -> Option<#ident> {
+    let impl_ = enumerable_impl_with_enumerator(&target, enumerable_size_option, EnumeratorInfo {
+        keyword: EnumeratorKeyword::Enum,
+        body: enumerator_variants,
+        new_fn_body: quote!({
+            let mut result = Self::#first_enumerator_variant;
+            result.step();
+            result
+        }),
+        step_fn_body: quote!({
+            loop {
                 match self {
-                    #current_match_branches
-                    _ => None,
+                    #step_match_branches
+                    Self::#enumerator_variant_name_done => {},
                 }
+
+                break;
             }
-        }
-    ))
+        }),
+        next_to_yield_fn_body: quote!({
+            match self {
+                #current_match_branches
+                _ => None,
+            }
+        }),
+    });
+
+    Ok(impl_.generate())
 }
 
 /// Implements the `Enumerable` trait for a struct.
@@ -417,59 +397,27 @@ fn impl_enumerable_for_struct(s: ItemStruct) -> Result<TokenStream, TokenStream>
         enumerable_trait_path,
     );
 
-    let enumerator_type = target.enumerator_type();
-    let vis = &s.vis;
-
-    let result = quote!(
-        #[automatically_derived]
-        impl #enumerable_trait_path for #ident {
-            type Enumerator = #enumerator_type;
-
-            fn enumerator() -> Self::Enumerator {
-                #enumerator_type::new()
-            }
-
-            const ENUMERABLE_SIZE_OPTION: Option<usize> = #enumerable_size_option;
-        }
-
-        #[doc(hidden)]
-        #vis struct #enumerator_type {
-            #( #enumerator_refs: <#field_types as #enumerable_trait_path>::Enumerator,)*
+    let impl_ = enumerable_impl_with_enumerator(&target, enumerable_size_option, EnumeratorInfo {
+        keyword: EnumeratorKeyword::Struct,
+        body: quote! {
+            #( #enumerator_refs: <#field_types as #enumerable_trait_path>::Enumerator, )*
             next: Option<#ident>,
-        }
-
-        impl #enumerator_type {
-            #[allow(unreachable_code, unused_variables, non_shorthand_field_patterns)]
-            fn new() -> Self {
-                #init
-            }
-
-            #[allow(unreachable_code, unused_variables, non_shorthand_field_patterns)]
-            fn step(&mut self) {
-                if let Some(#ident #binder) = &mut self.next {
-                    #(
-                        let #enumerator_refs = &mut self.#enumerator_refs;
-                    )*
-                    {
-                        #step
-                    }
+        },
+        new_fn_body: quote!(#init),
+        step_fn_body: quote!({
+            if let Some(#ident #binder) = &mut self.next {
+                #(
+                    let #enumerator_refs = &mut self.#enumerator_refs;
+                )*
+                {
+                    #step
                 }
             }
-        }
+        }),
+        next_to_yield_fn_body: quote!(self.next),
+    });
 
-        #[automatically_derived]
-        impl Iterator for #enumerator_type {
-            type Item = #ident;
-
-            fn next(&mut self) -> Option<<Self as Iterator>::Item> {
-                let result = self.next;
-                self.step();
-                result
-            }
-        }
-    );
-
-    Ok(result)
+    Ok(impl_.generate())
 }
 
 /// Derives the `Enumerable` trait for an enum or struct.
