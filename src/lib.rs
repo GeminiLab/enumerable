@@ -21,9 +21,10 @@
 /// - [`Result`]: Yields `Ok(item)` for each possible value of `T` and then `Err(error)` for each
 /// possible value of `E`.
 /// - `char`: Yields all possible Unicode scalar values, i.e. all code points ranging from `U+0000`
-///  to `U+10FFFF`, excluding the surrogate code points (`U+D800` to `U+DFFF`).
+/// to `U+10FFFF`, excluding the surrogate code points (`U+D800` to `U+DFFF`), from the lowest to
+/// the highest one.
 /// - Tuples: Yields all possible values of the tuple with 1 to 16 elements, in a lexicographic
-/// ordering (as `core::cmp::Ord` does), provided that all elements implement `Enumerable`.
+/// ordering (as [`core::cmp::Ord`] does), provided that all elements implement `Enumerable`.
 /// - `()`: Yields the unit value `()`.
 ///
 /// ## Derivable
