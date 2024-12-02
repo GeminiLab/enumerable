@@ -246,11 +246,14 @@ mod generic_types {
 
     #[test]
     fn test_generic_enum() {
-        let expected1 = <GenericStruct2<u8, bool> as Enumerable>::enumerator()
-            .map(GenericEnum3::Variant1);
+        let expected1 =
+            <GenericStruct2<u8, bool> as Enumerable>::enumerator().map(GenericEnum3::Variant1);
         let expected2 = std::iter::once(GenericEnum3::Variant2);
         let expected3 = <Result<bool, bool>>::enumerator().map(GenericEnum3::Variant3);
-        let expected = expected1.chain(expected2).chain(expected3).collect::<Vec<_>>();
+        let expected = expected1
+            .chain(expected2)
+            .chain(expected3)
+            .collect::<Vec<_>>();
 
         assert_enumerator_eq::<GenericEnum3<u8, bool>>(expected);
     }
