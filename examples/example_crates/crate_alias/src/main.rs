@@ -1,4 +1,11 @@
-use enumerable1::Enumerable as E;
+use ::enumerable1::Enumerable as E;
+
+/// A conflicting trait. Used here to test if `#[derive(E)]` can find the correct trait.
+mod enumerable1 {
+    pub trait Enumerable {
+        fn wow(&self) -> u8;
+    }
+}
 
 #[derive(Copy, Clone, E)]
 #[enumerator(Ehhhhh)]
@@ -8,5 +15,7 @@ struct A {
 
 fn main() {
     println!("Hello, world!");
-    println!("Number of possible values of A: {:?}", <A as E>::enumerator().count());
+    // does the `#[enumerator(Ehhhhh)]` attribute work?
+    let mut enumerator: Ehhhhh = <A as E>::enumerator();
+    println!("Number of possible values of A: {:?}", enumerator.count());
 }
