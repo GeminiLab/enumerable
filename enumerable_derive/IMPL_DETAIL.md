@@ -518,5 +518,96 @@ impl Iterator for ComplexEnumEnumerator {
 Whew! It's really long, right? But the overall structure is still the same as the generators for structs. The differences are:
 
 - There are more states, and states are stored explicitly.
-- The `step` method is more complex. It looks like a concatenation of the `step` and `new` methods of the generators of fields of the variants, with some extra logic for state transitions.
+- The `step` method is more complex. It looks like a concatenation of the `step` and `new` methods of the generators for fields of the variants, with some extra logic for state transitions.
 - The `next_to_yield` method is added to extract the value to yield from the state.
+
+As we have the enum enumerator, the implementation of `Enumerable` for the enum is straightforward. The `ENUMERABLE_SIZE_OPTION` is calculated by summing the sizes of all variants.
+
+```rust
+impl Enumerable for ComplexEnum {
+    type Enumerator = ComplexEnumEnumerator;
+    
+    fn enumerator() -> Self::Enumerator {
+        ComplexEnumEnumerator::new()
+    }
+
+    const ENUMERABLE_SIZE_OPTION: Option<usize> = {
+        let size: Option<usize> = Some(0usize);
+        let size: Option<usize> = match (size, <u8 as Enumerable>::ENUMERABLE_SIZE_OPTION) {
+            (Some(size), Some(size_field)) => size.checked_add(size_field),
+            _ => None,
+        };
+        let size: Option<usize> = match (size, Some(1usize)) {
+            (Some(size), Some(size_field)) => size.checked_add(size_field),
+            _ => None,
+        };
+        let size: Option<usize> = match (size, <UninhabitedEnum as Enumerable>::ENUMERABLE_SIZE_OPTION) {
+            (Some(size), Some(size_field)) => size.checked_add(size_field),
+            _ => None,
+        };
+        let size: Option<usize> = match (
+            size,
+            {
+                let size: Option<usize> = Some(1usize);
+                let size: Option<usize> = match (size, <SimpleEnum as Enumerable>::ENUMERABLE_SIZE_OPTION) {
+                    (Some(0), _) | (_, Some(0)) => Some(0),
+                    (Some(size), Some(size_field)) => size.checked_mul(size_field),
+                    _ => None,
+                };
+                let size: Option<usize> = match (size, <SimpleEnum as Enumerable>::ENUMERABLE_SIZE_OPTION) {
+                    (Some(0), _) | (_, Some(0)) => Some(0),
+                    (Some(size), Some(size_field)) => size.checked_mul(size_field),
+                    _ => None,
+                };
+                size
+            },
+        ) {
+            (Some(size), Some(size_field)) => size.checked_add(size_field),
+            _ => None,
+        };
+        size
+    };
+}
+```
+
+## How to deal with generic parameters?
+
+So far, we have only considered the case where the fields are concrete types. But what if the fields are generic parameters? Generic parameters are already a complex topic, and it's even more complex when combined with bounds and defaults, like:
+
+```rust
+#[derive(Clone, Copy)]
+struct ExampleGeneric<
+    A: Enumerable + Hash,
+    B: Enumerable<Enumerator: ExactSizeIterator>,
+    C: Hash + Copy = A
+> where
+    A::Enumerator: ExactSizeIterator, B: PartialOrd + PartialEq,
+{
+    field1: A,
+    field2: bool,
+    field3: Result<B, C>,
+}
+```
+
+Luckily, implementing `Enumerable` for types with generic parameters is not that hard. We can just copy the generic parameters and bounds (both the bounds in the `where` clause and the bounds in generic parameters) to the definition of enumerators (with some modifications, of course), and the implementation of `Enumerable`, all other things are the same. The enumerator for the example above looks like this:
+
+```rust
+pub struct ExampleGenericEnumerator<
+    A: Enumerable + Hash,
+    B: Enumerable<Enumerator: ExactSizeIterator>,
+    C: Hash + Copy, // <-- default removed here
+> where
+    // ⬇️ where clauses copied from the struct
+    A::Enumerator: ExactSizeIterator,
+    B: PartialOrd + PartialEq,
+    // ⬇️ where clauses for all types in the struct
+    A: Enumerable,
+    bool: Enumerable,
+    Result<B, C>: Enumerable,
+{
+    field1_enumerator: <A as Enumerable>::Enumerator,
+    field2_enumerator: <bool as Enumerable>::Enumerator,
+    field3_enumerator: <Result<B, C> as Enumerable>::Enumerator,
+    next: Option<ExampleGeneric<A, B, C>>,
+}
+```

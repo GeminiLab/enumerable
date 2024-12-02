@@ -214,3 +214,44 @@ mod tuple {
         )
     }
 }
+
+mod generic_types {
+    use super::*;
+
+    #[test]
+    fn test_generic_struct1() {
+        assert_enumerator_eq(<u8 as Enumerable>::enumerator().map(|x| GenericStruct1 { field: x }));
+    }
+
+    #[test]
+    fn test_generic_struct_with_default() {
+        assert_enumerator_eq(
+            <(u8, u8) as Enumerable>::enumerator()
+                .map(|(field1, field2)| GenericStruct2 { field1, field2 }),
+        );
+        assert_enumerator_eq(
+            <(u8, bool) as Enumerable>::enumerator()
+                .map(|(field1, field2)| GenericStruct2 { field1, field2 }),
+        );
+
+        assert_eq!(
+            u8::ENUMERABLE_SIZE * u8::ENUMERABLE_SIZE,
+            GenericStruct2::<u8>::ENUMERABLE_SIZE
+        );
+        assert_eq!(
+            u8::ENUMERABLE_SIZE * 2,
+            GenericStruct2::<u8, bool>::ENUMERABLE_SIZE
+        );
+    }
+
+    #[test]
+    fn test_generic_enum() {
+        let expected1 = <GenericStruct2<u8, bool> as Enumerable>::enumerator()
+            .map(GenericEnum3::Variant1);
+        let expected2 = std::iter::once(GenericEnum3::Variant2);
+        let expected3 = <Result<bool, bool>>::enumerator().map(GenericEnum3::Variant3);
+        let expected = expected1.chain(expected2).chain(expected3).collect::<Vec<_>>();
+
+        assert_enumerator_eq::<GenericEnum3<u8, bool>>(expected);
+    }
+}

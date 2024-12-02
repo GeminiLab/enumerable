@@ -48,3 +48,36 @@ pub enum ComplexEnum {
     EmptyBranch(Enum0),
     UnnamedFieldAfterEmpty { e3: Enum3 },
 }
+
+// following are test types for generic types.
+//
+// they are also used to test whether the `#[derive(Enumerable)]` macro can
+// handle all kinds of generic types and bounds correctly.
+
+// test no where clause
+#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Enumerable)]
+pub struct GenericStruct1<T: Copy + Enumerable> {
+    pub field: T,
+}
+
+#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Enumerable)]
+pub struct GenericStruct2<T, U: Enumerable = T>
+where
+    T: Clone + Enumerable + PartialEq,
+    <T as Enumerable>::Enumerator: ExactSizeIterator,
+{
+    pub field1: T,
+    pub field2: U,
+}
+
+#[rustfmt::skip] // test where clause without trailing comma
+#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Enumerable)]
+pub enum GenericEnum3<
+    T: Enumerable<Enumerator: ExactSizeIterator>,
+    U: Enumerable,
+    V = U,
+> where T: Clone + PartialEq, V: Copy {
+    Variant1(GenericStruct2<T, U>),
+    Variant2, // test empty variant
+    Variant3(Result<U, V>),
+}
