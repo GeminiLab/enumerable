@@ -33,8 +33,13 @@ impl<'a> EnumerableImpl<'a> {
     pub fn generate(&self) -> TokenStream {
         let enumerable_trait_path = self.target.enumerable_trait_path();
         let target_type = self.target.target_type();
-        let enumerator_type = self.enumerator_type.unwrap_or_else(|| self.target.enumerator_type());
-        let enumerator_creator = self.enumerator_creator.cloned().unwrap_or_else(|| quote!(<#enumerator_type>::new()));
+        let enumerator_type = self
+            .enumerator_type
+            .unwrap_or_else(|| self.target.enumerator_type());
+        let enumerator_creator = self
+            .enumerator_creator
+            .cloned()
+            .unwrap_or_else(|| quote!(<#enumerator_type>::new()));
         let size_option = &self.size_option;
 
         quote!(
@@ -85,7 +90,11 @@ pub struct EnumerableImplWithEnumerator<'a> {
     enumerator_info: EnumeratorInfo,
 }
 
-pub fn enumerable_impl_with_enumerator<'a>(target: &'a Target, size_option: SizeOption, enumerator_info: EnumeratorInfo) -> EnumerableImplWithEnumerator<'a> {
+pub fn enumerable_impl_with_enumerator<'a>(
+    target: &'a Target,
+    size_option: SizeOption,
+    enumerator_info: EnumeratorInfo,
+) -> EnumerableImplWithEnumerator<'a> {
     EnumerableImplWithEnumerator {
         enumerable_impl: EnumerableImpl::new(target, size_option),
         enumerator_info,
@@ -94,7 +103,10 @@ pub fn enumerable_impl_with_enumerator<'a>(target: &'a Target, size_option: Size
 
 impl<'a> EnumerableImplWithEnumerator<'a> {
     #[allow(dead_code)]
-    pub fn with_enumerable_impl<F: FnOnce(EnumerableImpl<'a>) -> EnumerableImpl<'a>>(mut self, f: F) -> Self {
+    pub fn with_enumerable_impl<F: FnOnce(EnumerableImpl<'a>) -> EnumerableImpl<'a>>(
+        mut self,
+        f: F,
+    ) -> Self {
         self.enumerable_impl = f(self.enumerable_impl);
         self
     }

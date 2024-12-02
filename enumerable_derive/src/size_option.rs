@@ -1,11 +1,11 @@
 //! Calculations for the size of enumerable types.
 
 use proc_macro2::{Span, TokenStream};
-use syn::LitInt;
 use quote::{quote, ToTokens};
+use syn::LitInt;
 
 /// An constant expression with type `Option<usize>`.
-/// 
+///
 /// This type is used to represent the size of an enumerable type.
 pub struct SizeOption {
     token_stream: TokenStream,
@@ -13,14 +13,12 @@ pub struct SizeOption {
 
 impl SizeOption {
     /// Creates a new `SizeOption` from a raw token stream.
-    /// 
+    ///
     /// ## Safety
-    /// 
+    ///
     /// The token stream must be a valid Rust expression of type `Option<usize>`.
     pub unsafe fn from_raw(token_stream: TokenStream) -> Self {
-        Self {
-            token_stream
-        }
+        Self { token_stream }
     }
 
     /// Creates a new `SizeOption` from the `ENUMERABLE_SIZE_OPTION` constant of
