@@ -77,19 +77,10 @@ impl Target {
 
         let where_clause = match &generics.where_clause {
             Some(wc) => {
-                if wc.predicates.trailing_punct() {
-                    quote!(#wc #where_clause_for_fields)
-                } else {
-                    quote!(#wc, #where_clause_for_fields)
-                }
+                let predicates = wc.predicates.iter();
+                quote!(where #where_clause_for_fields #(#predicates,)*)
             }
-            None => {
-                if where_clause_for_fields.is_empty() {
-                    quote!()
-                } else {
-                    quote!(where #where_clause_for_fields)
-                }
-            }
+            None => quote!(where #where_clause_for_fields),
         };
 
         if generics.params.is_empty() {

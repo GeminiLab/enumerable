@@ -1,20 +1,29 @@
 use enumerable::Enumerable;
 
-#[derive(Clone, Copy, Debug, Enumerable)]
-enum E {
+// Where clauses with no predicates are allowed in Rust, so we will test whether
+// the derive macro can handle it.
+#[rustfmt::skip]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Enumerable)]
+enum E where { 
     A,
     B,
     C,
 }
 
+// Test where clauses without predicates in a struct with generics.
+#[rustfmt::skip]
 #[derive(Clone, Copy, Debug, Enumerable)]
-struct G<T, U> {
+struct G<T, U> where {
     t: T,
     u: U,
 }
 
+// Test a generic enum with complex bounds.
 #[derive(Clone, Copy, Debug, Enumerable)]
-enum EE<T, U = T> {
+enum EE<T: PartialOrd, U: PartialEq = T>
+where
+    T: Enumerable,
+{
     A(T),
     B(U),
     C((T, U), (U, T)),
@@ -53,39 +62,3 @@ fn main() {
         println!("{:?}", ee);
     }
 }
-
-// All possible values of G<bool, E>:
-// G { t: false, u: A }
-// G { t: false, u: B }
-// G { t: false, u: C }
-// G { t: true, u: A }
-// G { t: true, u: B }
-// G { t: true, u: C }
-// All possible values of G<E, bool>:
-// G { t: A, u: false }
-// G { t: A, u: true }
-// G { t: B, u: false }
-// G { t: B, u: true }
-// G { t: C, u: false }
-// G { t: C, u: true }
-// All possible values of EE<bool>:
-// A(false)
-// A(true)
-// B(false)
-// B(true)
-// C((false, false))
-// C((false, true))
-// C((true, false))
-// C((true, true))
-// All possible values of EE<bool, E>:
-// A(false)
-// A(true)
-// B(A)
-// B(B)
-// B(C)
-// C((false, A))
-// C((false, B))
-// C((false, C))
-// C((true, A))
-// C((true, B))
-// C((true, C))
