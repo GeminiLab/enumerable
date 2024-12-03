@@ -354,7 +354,7 @@ fn impl_enumerable_for_enum(e: ItemEnum) -> Result<TokenStream, TokenStream> {
 
     enumerator_variants.append_all(quote!(#enumerator_variant_name_done,));
 
-    let enumerable_size_option = SizeOption::from_sum(size_options.iter());
+    let enumerable_size_option = SizeOption::from_sum(size_options.into_iter());
     let impl_ = enumerable_impl_with_enumerator(
         &target,
         enumerable_size_option,

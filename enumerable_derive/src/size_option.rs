@@ -40,41 +40,81 @@ impl SizeOption {
     }
 
     /// Creates a new `SizeOption` from the product of a list of `SizeOption`s.
-    pub fn from_product(sizes: impl Iterator<Item = impl ToTokens>) -> Self {
-        // SAFETY: `size` is always an `Option<usize>`.
-        unsafe {
-            Self::from_raw(quote!(
-                {
-                    let size: Option<usize> = Some(1usize);
-                    #(
-                        let size: Option<usize> = match (size, #sizes) {
-                            (Some(0), _) | (_, Some(0)) => Some(0),
-                            (Some(size), Some(size_field)) => size.checked_mul(size_field),
-                            _ => None,
-                        };
-                    )*
-                    size
+    pub fn from_product(sizes: impl Iterator<Item = SizeOption>) -> Self {
+        let mut sizes = sizes.peekable();
+
+        // Optimization: if the iterator is empty, the product is 1.
+        let size_first = match sizes.next() {
+            Some(size) => size,
+            None => {
+                return Self::from_usize(1);
+            }
+        };
+
+        match sizes.peek() {
+            Some(_) => {
+                // there are at least two sizes
+
+                // SAFETY: `size` is always an `Option<usize>`.
+                unsafe {
+                    Self::from_raw(quote!(
+                        {
+                            let size: Option<usize> = #size_first;
+                            #(
+                                let size: Option<usize> = match (size, #sizes) {
+                                    (Some(0), _) | (_, Some(0)) => Some(0),
+                                    (Some(size), Some(size_field)) => size.checked_mul(size_field),
+                                    _ => None,
+                                };
+                            )*
+                            size
+                        }
+                    ))
                 }
-            ))
+            }
+            None => {
+                // there is only one size
+                return size_first;
+            }
         }
     }
 
     /// Creates a new `SizeOption` from the sum of a list of `SizeOption`s.
-    pub fn from_sum(sizes: impl Iterator<Item = impl ToTokens>) -> Self {
-        // SAFETY: `size` is always an `Option<usize>`.
-        unsafe {
-            Self::from_raw(quote!(
-                {
-                    let size: Option<usize> = Some(0usize);
-                    #(
-                        let size: Option<usize> = match (size, #sizes) {
-                            (Some(size), Some(size_field)) => size.checked_add(size_field),
-                            _ => None,
-                        };
-                    )*
-                    size
+    pub fn from_sum(sizes: impl Iterator<Item = SizeOption>) -> Self {
+        let mut sizes = sizes.peekable();
+
+        // Optimization: if the iterator is empty, the sum is 0.
+        let size_first = match sizes.next() {
+            Some(size) => size,
+            None => {
+                return Self::from_usize(0);
+            }
+        };
+
+        match sizes.peek() {
+            Some(_) => {
+                // there are at least two sizes
+
+                // SAFETY: `size` is always an `Option<usize>`.
+                unsafe {
+                    Self::from_raw(quote!(
+                        {
+                            let size: Option<usize> = #size_first;
+                            #(
+                                let size: Option<usize> = match (size, #sizes) {
+                                    (Some(size), Some(size_field)) => size.checked_add(size_field),
+                                    _ => None,
+                                };
+                            )*
+                            size
+                        }
+                    ))
                 }
-            ))
+            }
+            None => {
+                // there is only one size
+                return size_first;
+            }
         }
     }
 }

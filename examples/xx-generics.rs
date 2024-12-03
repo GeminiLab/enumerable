@@ -17,26 +17,38 @@ struct G<T, U> {
 enum EE<T, U = T> {
     A(T),
     B(U),
-    C((T, U)),
+    C((T, U), (U, T)),
 }
 
 fn main() {
-    println!("All possible values of G<bool, E>:");
+    println!(
+        "All possible values of G<bool, E> ({} in total):",
+        G::<bool, E>::ENUMERABLE_SIZE
+    );
     for g in G::<bool, E>::enumerator() {
         println!("{:?}", g);
     }
 
-    println!("All possible values of G<E, bool>:");
+    println!(
+        "All possible values of G<E, bool> ({} in total):",
+        G::<E, bool>::ENUMERABLE_SIZE
+    );
     for g in G::<E, bool>::enumerator() {
         println!("{:?}", g);
     }
 
-    println!("All possible values of EE<bool>:");
+    println!(
+        "All possible values of EE<bool> ({} in total):",
+        EE::<bool>::ENUMERABLE_SIZE
+    );
     for ee in EE::<bool>::enumerator() {
         println!("{:?}", ee);
     }
 
-    println!("All possible values of EE<bool, E>:");
+    println!(
+        "All possible values of EE<bool, E> ({} in total):",
+        EE::<bool, E>::ENUMERABLE_SIZE
+    );
     for ee in EE::<bool, E>::enumerator() {
         println!("{:?}", ee);
     }
