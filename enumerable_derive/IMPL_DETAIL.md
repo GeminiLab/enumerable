@@ -595,12 +595,12 @@ Luckily, implementing `Enumerable` for types with generic parameters is not that
 pub struct ExampleGenericEnumerator<
     A: Enumerable + Hash,
     B: Enumerable<Enumerator: ExactSizeIterator>,
-    C: Hash + Copy, // <-- default removed here
+    C: Hash + Copy, // ⬅️ default removed here
 > where
-    // ⬇️ where clauses copied from the struct
+    // ⬇️ where clause copied from the struct
     A::Enumerator: ExactSizeIterator,
     B: PartialOrd + PartialEq,
-    // ⬇️ where clauses for all types in the struct
+    // ⬇️ where clause for all types in the struct
     A: Enumerable,
     bool: Enumerable,
     Result<B, C>: Enumerable,
@@ -610,4 +610,28 @@ pub struct ExampleGenericEnumerator<
     field3_enumerator: <Result<B, C> as Enumerable>::Enumerator,
     next: Option<ExampleGeneric<A, B, C>>,
 }
+```
+
+And the implementation of `Enumerable` for the example above looks like this:
+
+```rust
+impl<
+    A: Enumerable + Hash,
+    B: Enumerable<Enumerator: ExactSizeIterator>,
+    C: Hash + Copy, // ⬅️ default removed here also
+> ExampleGenericEnumerator<A, B, C> // ⬅️ only the identifiers here
+where
+    // ⬇️ where clause same as the definition of the enumerator
+    A::Enumerator: ExactSizeIterator,
+    B: PartialOrd + PartialEq,
+    A: Enumerable,
+    bool: Enumerable,
+    Result<B, C>: Enumerable, 
+{
+    // methods here are unchanged
+}
+
+// Generic parameters and where clause are the same as above in
+// `impl<...> Iterator for ExampleGenericEnumerator<...> where ...` and
+// `impl<...> Enumerable for ExampleGeneric<...> where ...`.
 ```
