@@ -54,12 +54,13 @@ pub enum ComplexEnum {
 // they are also used to test whether the `#[derive(Enumerable)]` macro can
 // handle all kinds of generic types and bounds correctly.
 
-// test no where clause
+// test generic struct without where clause
 #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Enumerable)]
 pub struct GenericStruct1<T: Copy + Enumerable> {
     pub field: T,
 }
 
+// test generic struct with default generic type parameters and where clause
 #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Enumerable)]
 pub struct GenericStruct2<T, U: Enumerable = T>
 where
@@ -75,7 +76,7 @@ where
 pub enum GenericEnum3<
     T: Enumerable<Enumerator: ExactSizeIterator>,
     U: Enumerable,
-    V = U,
+    V = U
 > where T: Clone + PartialEq, V: Copy {
     Variant1(GenericStruct2<T, U>),
     Variant2, // test empty variant
