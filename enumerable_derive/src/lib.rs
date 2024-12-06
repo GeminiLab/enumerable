@@ -257,11 +257,11 @@ fn impl_enumerable_for_enum(e: ItemEnum) -> Result<TokenStream, TokenStream> {
         ));
     }
 
-    if !e.generics.params.is_empty() {
-        return Err(
-            quote_spanned!(e.generics.span() => compile_error!("generic types not supported yet");),
-        );
-    }
+    // if !e.generics.params.is_empty() {
+    //     return Err(
+    //         quote_spanned!(e.generics.span() => compile_error!("generic types not supported yet");),
+    //     );
+    // }
 
     let mut enumerator_variants = TokenStream::new();
     let mut step_match_branches = TokenStream::new();
@@ -354,7 +354,7 @@ fn impl_enumerable_for_enum(e: ItemEnum) -> Result<TokenStream, TokenStream> {
 
     enumerator_variants.append_all(quote!(#enumerator_variant_name_done,));
 
-    let enumerable_size_option = SizeOption::from_sum(size_options.iter());
+    let enumerable_size_option = SizeOption::from_sum(size_options.into_iter());
     let impl_ = enumerable_impl_with_enumerator(
         &target,
         enumerable_size_option,
@@ -395,17 +395,18 @@ fn impl_enumerable_for_struct(s: ItemStruct) -> Result<TokenStream, TokenStream>
     let fields = &s.fields;
     let enumerable_trait_path = target.enumerable_trait_path();
 
-    if !s.generics.params.is_empty() {
-        return Err(
-            quote_spanned!(s.generics.span() => compile_error!("generic types not supported yet");),
-        );
-    }
+    // if !s.generics.params.is_empty() {
+    //     return Err(
+    //         quote_spanned!(s.generics.span() => compile_error!("generic types not supported yet");),
+    //     );
+    // }
 
     let fields_to_enumerate =
         FieldsToEnumerate::from_fields(fields, field_ref_naming, enumerator_ref_naming);
     let binder = &fields_to_enumerate.binder;
     let enumerator_refs: Vec<_> = fields_to_enumerate.enumerator_refs().collect();
     let field_types: Vec<_> = fields_to_enumerate.field_types().collect();
+    let target_generics = target.generic_params_simple();
 
     if fields.is_empty() {
         return Ok(impl_enumerable_for_unit_type(
@@ -448,7 +449,7 @@ fn impl_enumerable_for_struct(s: ItemStruct) -> Result<TokenStream, TokenStream>
             keyword: EnumeratorKeyword::Struct,
             body: quote! {
                 #( #enumerator_refs: <#field_types as #enumerable_trait_path>::Enumerator, )*
-                next: Option<#ident>,
+                next: Option<#ident #target_generics>,
             },
             new_fn_body: quote!(#init),
             step_fn_body: quote!({
