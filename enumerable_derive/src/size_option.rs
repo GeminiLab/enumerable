@@ -23,7 +23,7 @@ impl SizeOption {
 
     /// Creates a new `SizeOption` from the `ENUMERABLE_SIZE_OPTION` constant of
     /// a type implementing the `Enumerable` trait.
-    pub fn from_type(type_name: TokenStream, enumerable_trait_path: &TokenStream) -> Self {
+    pub fn from_type(type_name: impl ToTokens, enumerable_trait_path: impl ToTokens) -> Self {
         // SAFETY: It's a `ENUMERABLE_SIZE_OPTION` constant of a type implementing the `Enumerable` trait.
         unsafe {
             Self::from_raw(quote!(

@@ -6,8 +6,8 @@ use crate::{size_option::SizeOption, targets::Target};
 pub struct EnumerableImpl<'a> {
     target: &'a Target,
     size_option: SizeOption,
-    enumerator_creator: Option<&'a TokenStream>,
     enumerator_type: Option<&'a TokenStream>,
+    enumerator_creator: Option<&'a TokenStream>,
 }
 
 impl<'a> EnumerableImpl<'a> {
@@ -15,14 +15,9 @@ impl<'a> EnumerableImpl<'a> {
         Self {
             target,
             size_option,
-            enumerator_creator: None,
             enumerator_type: None,
+            enumerator_creator: None,
         }
-    }
-
-    pub fn override_enumerator_creator(mut self, enumerator_creator: &'a TokenStream) -> Self {
-        self.enumerator_creator = Some(enumerator_creator);
-        self
     }
 
     pub fn override_enumerator_type(mut self, enumerator_type: &'a TokenStream) -> Self {
@@ -30,25 +25,30 @@ impl<'a> EnumerableImpl<'a> {
         self
     }
 
+    pub fn override_enumerator_creator(mut self, enumerator_creator: &'a TokenStream) -> Self {
+        self.enumerator_creator = Some(enumerator_creator);
+        self
+    }
+
     pub fn generate(&self) -> TokenStream {
         let enumerable_trait_path = self.target.enumerable_trait_path();
         let impl_generics = self.target.generic_params_full();
         let target_type = self.target.target_type();
-        let target_generics = self.target.generic_params_simple();
         let where_clause = self.target.where_clause();
         let enumerator_type = self
             .enumerator_type
+            .map(Into::into)
             .unwrap_or_else(|| self.target.enumerator_type());
         let enumerator_creator = self
             .enumerator_creator
             .cloned()
-            .unwrap_or_else(|| quote!(<#enumerator_type #target_generics>::new()));
+            .unwrap_or_else(|| quote!(<#enumerator_type>::new()));
         let size_option = &self.size_option;
 
         quote!(
             #[automatically_derived]
-            impl #impl_generics #enumerable_trait_path for #target_type #target_generics #where_clause {
-                type Enumerator = #enumerator_type #target_generics;
+            impl #impl_generics #enumerable_trait_path for #target_type #where_clause {
+                type Enumerator = #enumerator_type;
 
                 fn enumerator() -> Self::Enumerator {
                     #enumerator_creator
@@ -124,10 +124,9 @@ impl<'a> EnumerableImplWithEnumerator<'a> {
         let vis = self.target().visibility();
         let target_type = self.target().target_type();
         let enumerator_type = self.target().enumerator_type();
-        let enumerator_def_generics = self.target().generic_params_full();
+        let enumerator_type_bounded = self.target().enumerator_type_bounded();
         let where_clause = self.target().where_clause();
         let impl_generics = self.target().generic_params_full();
-        let enumerator_generics = self.target().generic_params_simple();
         let enumerator_keyword = &self.enumerator_info.keyword;
         let enumerator_body = &self.enumerator_info.body;
         let enumerator_new_fn_body = &self.enumerator_info.new_fn_body;
@@ -138,11 +137,11 @@ impl<'a> EnumerableImplWithEnumerator<'a> {
             #enumerable_impl
 
             #[doc(hidden)]
-            #vis #enumerator_keyword #enumerator_type #enumerator_def_generics #where_clause {
+            #vis #enumerator_keyword #enumerator_type_bounded #where_clause {
                 #enumerator_body
             }
 
-            impl #impl_generics #enumerator_type #enumerator_generics #where_clause {
+            impl #impl_generics #enumerator_type #where_clause {
                 fn new() -> Self {
                     #enumerator_new_fn_body
                 }
@@ -151,14 +150,14 @@ impl<'a> EnumerableImplWithEnumerator<'a> {
                     #enumerator_step_fn_body
                 }
 
-                fn next_to_yield(&self) -> Option<#target_type #enumerator_generics> {
+                fn next_to_yield(&self) -> Option<#target_type> {
                     #enumerator_next_to_yield_fn_body
                 }
             }
 
             #[automatically_derived]
-            impl #impl_generics ::core::iter::Iterator for #enumerator_type #enumerator_generics #where_clause {
-                type Item = #target_type #enumerator_generics;
+            impl #impl_generics ::core::iter::Iterator for #enumerator_type #where_clause {
+                type Item = #target_type;
 
                 fn next(&mut self) -> Option<Self::Item> {
                     // `Option::inspect` is not available until Rust 1.76.0.
