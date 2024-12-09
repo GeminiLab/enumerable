@@ -34,4 +34,3 @@ std = ["enumerable_derive/std"]
 
 [dependencies]
 enumerable_derive = { path = "enumerable_derive", version = "=1.1.0-dev" }
-paste = "1.0.15"

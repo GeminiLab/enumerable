@@ -2,16 +2,19 @@
 
 use proc_macro::TokenStream as TokenStream1;
 use proc_macro2::{Ident, TokenStream};
-use quote::{format_ident, quote, quote_spanned, TokenStreamExt};
-use syn::{spanned::Spanned, Field, Fields, Item, ItemEnum, ItemStruct};
+use quote::{format_ident, quote, quote_spanned, ToTokens, TokenStreamExt};
+use syn::{spanned::Spanned, Item, ItemEnum, ItemStruct};
 
 mod code_gen;
+mod fields;
 mod size_option;
 mod targets;
+mod tuples;
 
 use code_gen::{
     enumerable_impl, enumerable_impl_with_enumerator, EnumeratorInfo, EnumeratorKeyword,
 };
+use fields::{FieldToEnumerate, FieldsToEnumerate, IdentOrIndex};
 use size_option::SizeOption;
 use targets::Target;
 
@@ -39,7 +42,7 @@ fn impl_enumerable_for_plain_enum<'a>(
     target: &'a Target,
     vars: impl Iterator<Item = &'a Ident>,
 ) -> TokenStream {
-    let target_type = target.target_type();
+    let target_type = target.target_type_name();
     let vars: Vec<_> = vars.collect();
     let vars_count = vars.len();
 
@@ -60,90 +63,11 @@ fn impl_enumerable_for_plain_enum<'a>(
         .generate()
 }
 
-/// The name of a field or its index if it's from a list of unnamed fields.
-enum FieldNameOrIndex<'a> {
-    Name(&'a Ident),
-    Index(usize),
-}
-
-/// Returns the name of a field or its index if it's from a list of unnamed fields.
-fn field_name_or_index(index: usize, field: &Field) -> FieldNameOrIndex {
-    field
-        .ident
-        .as_ref()
-        .map(FieldNameOrIndex::Name)
-        .unwrap_or_else(move || FieldNameOrIndex::Index(index))
-}
-
-struct FieldToEnumerate {
-    field_ref: Ident,
-    field_type: TokenStream,
-    enumerator_ref: Ident,
-}
-
-struct FieldsToEnumerate {
-    fields: Vec<FieldToEnumerate>,
-    binder: TokenStream,
-}
-
-impl FieldsToEnumerate {
-    fn from_fields(
-        fields: &Fields,
-        mut field_ref_naming: impl FnMut(FieldNameOrIndex) -> Ident,
-        mut enumerator_ref_naming: impl FnMut(FieldNameOrIndex) -> Ident,
-    ) -> Self {
-        let fields_to_enumerate: Vec<_> = fields
-            .iter()
-            .enumerate()
-            .map(|(index, field)| {
-                let field_ref = field_ref_naming(field_name_or_index(index, field));
-                let enumerator_ref = enumerator_ref_naming(field_name_or_index(index, field));
-                let field_type = &field.ty;
-
-                FieldToEnumerate {
-                    field_ref,
-                    field_type: quote!(#field_type),
-                    enumerator_ref,
-                }
-            })
-            .collect();
-
-        let field_refs = fields_to_enumerate.iter().map(|field| &field.field_ref);
-
-        let binder = if let Fields::Unnamed(_) = fields {
-            quote!(( #(#field_refs),* ))
-        } else {
-            quote!({ #(#field_refs),* })
-        };
-
-        Self {
-            fields: fields_to_enumerate,
-            binder,
-        }
-    }
-
-    fn fields_iter(&self) -> impl Iterator<Item = &FieldToEnumerate> {
-        self.fields.iter()
-    }
-
-    fn field_refs(&self) -> impl Iterator<Item = &Ident> {
-        self.fields.iter().map(|field| &field.field_ref)
-    }
-
-    fn field_types(&self) -> impl Iterator<Item = &TokenStream> {
-        self.fields.iter().map(|field| &field.field_type)
-    }
-
-    fn enumerator_refs(&self) -> impl Iterator<Item = &Ident> {
-        self.fields.iter().map(|field| &field.enumerator_ref)
-    }
-}
-
 /// Generate the code fragment which move the generator enumerating the fields to the next state, and store the next values of the fields to yield.
 fn generate_step_for_fields<'a>(
     fields: impl Iterator<Item = &'a FieldToEnumerate>,
     on_finished: TokenStream,
-    enumerable_trait_path: &'a TokenStream,
+    enumerable_trait_path: impl ToTokens,
 ) -> TokenStream {
     let mut result = on_finished;
 
@@ -187,7 +111,7 @@ fn generate_init_for_fields<'a>(
     fields: impl Iterator<Item = &'a FieldToEnumerate>,
     on_non_empty: TokenStream,
     on_empty: TokenStream,
-    enumerable_trait_path: &'a TokenStream,
+    enumerable_trait_path: impl ToTokens,
 ) -> TokenStream {
     let mut field_refs = vec![];
     let mut field_types = vec![];
@@ -225,17 +149,17 @@ fn generate_init_for_fields<'a>(
     )
 }
 
-fn field_ref_naming(field: FieldNameOrIndex) -> Ident {
+fn field_ref_naming(field: IdentOrIndex) -> Ident {
     match field {
-        FieldNameOrIndex::Name(field_name) => field_name.clone(),
-        FieldNameOrIndex::Index(index) => format_ident!("field_{}", index),
+        IdentOrIndex::Name(field_name) => field_name.clone(),
+        IdentOrIndex::Index(index) => format_ident!("field_{}", index),
     }
 }
 
-fn enumerator_ref_naming(field: FieldNameOrIndex) -> Ident {
+fn enumerator_ref_naming(field: IdentOrIndex) -> Ident {
     match field {
-        FieldNameOrIndex::Name(field_name) => format_ident!("enumerator_{}", field_name),
-        FieldNameOrIndex::Index(index) => format_ident!("enumerator_field_{}", index),
+        IdentOrIndex::Name(field_name) => format_ident!("enumerator_{}", field_name),
+        IdentOrIndex::Index(index) => format_ident!("enumerator_field_{}", index),
     }
 }
 
@@ -256,12 +180,6 @@ fn impl_enumerable_for_enum(e: ItemEnum) -> Result<TokenStream, TokenStream> {
             variants.iter().map(|v| &v.ident),
         ));
     }
-
-    // if !e.generics.params.is_empty() {
-    //     return Err(
-    //         quote_spanned!(e.generics.span() => compile_error!("generic types not supported yet");),
-    //     );
-    // }
 
     let mut enumerator_variants = TokenStream::new();
     let mut step_match_branches = TokenStream::new();
@@ -304,14 +222,14 @@ fn impl_enumerable_for_enum(e: ItemEnum) -> Result<TokenStream, TokenStream> {
 
         let field_sizes = var.fields.iter().map(|f| {
             let ty = &f.ty;
-            SizeOption::from_type(quote!(#ty), enumerable_trait_path)
+            SizeOption::from_type(quote!(#ty), enumerable_trait_path.clone())
         });
         size_options.push(SizeOption::from_product(field_sizes));
 
         let step = generate_step_for_fields(
             fields_to_enumerate.fields_iter(),
             quote!(*self = Self::#next_enumerator_variant_before; continue;),
-            enumerable_trait_path,
+            enumerable_trait_path.clone(),
         );
         let init = generate_init_for_fields(
             fields_to_enumerate.fields_iter(),
@@ -322,7 +240,7 @@ fn impl_enumerable_for_enum(e: ItemEnum) -> Result<TokenStream, TokenStream> {
                 *self = Self::#next_enumerator_variant_before;
                 continue;
             ),
-            enumerable_trait_path,
+            enumerable_trait_path.clone(),
         );
 
         enumerator_variants.append_all(quote!(
@@ -395,18 +313,13 @@ fn impl_enumerable_for_struct(s: ItemStruct) -> Result<TokenStream, TokenStream>
     let fields = &s.fields;
     let enumerable_trait_path = target.enumerable_trait_path();
 
-    // if !s.generics.params.is_empty() {
-    //     return Err(
-    //         quote_spanned!(s.generics.span() => compile_error!("generic types not supported yet");),
-    //     );
-    // }
+    let target_type = target.target_type();
 
     let fields_to_enumerate =
         FieldsToEnumerate::from_fields(fields, field_ref_naming, enumerator_ref_naming);
     let binder = &fields_to_enumerate.binder;
     let enumerator_refs: Vec<_> = fields_to_enumerate.enumerator_refs().collect();
     let field_types: Vec<_> = fields_to_enumerate.field_types().collect();
-    let target_generics = target.generic_params_simple();
 
     if fields.is_empty() {
         return Ok(impl_enumerable_for_unit_type(
@@ -417,14 +330,14 @@ fn impl_enumerable_for_struct(s: ItemStruct) -> Result<TokenStream, TokenStream>
 
     let field_sizes = fields.iter().map(|f| {
         let ty = &f.ty;
-        SizeOption::from_type(quote!(#ty), enumerable_trait_path)
+        SizeOption::from_type(quote!(#ty), enumerable_trait_path.clone())
     });
     let enumerable_size_option = SizeOption::from_product(field_sizes);
 
     let step = generate_step_for_fields(
         fields_to_enumerate.fields_iter(),
         quote!(self.next = None; return;),
-        enumerable_trait_path,
+        enumerable_trait_path.clone(),
     );
 
     let init = generate_init_for_fields(
@@ -439,7 +352,7 @@ fn impl_enumerable_for_struct(s: ItemStruct) -> Result<TokenStream, TokenStream>
                 #( #enumerator_refs, )* next: None,
             }
         ),
-        enumerable_trait_path,
+        enumerable_trait_path.clone(),
     );
 
     let impl_ = enumerable_impl_with_enumerator(
@@ -449,7 +362,7 @@ fn impl_enumerable_for_struct(s: ItemStruct) -> Result<TokenStream, TokenStream>
             keyword: EnumeratorKeyword::Struct,
             body: quote! {
                 #( #enumerator_refs: <#field_types as #enumerable_trait_path>::Enumerator, )*
-                next: Option<#ident #target_generics>,
+                next: Option<#target_type>,
             },
             new_fn_body: quote!(#init),
             step_fn_body: quote!({
@@ -480,9 +393,15 @@ pub fn derive_enumerable(input: TokenStream1) -> TokenStream1 {
         _ => Err(quote_spanned!(target.span() => compile_error!("only enums and structs are supported");).into()),
     };
 
-    match result {
-        Ok(tokens) => tokens,
-        Err(tokens) => tokens,
-    }
-    .into()
+    result.unwrap_or_else(|e| e).into()
+}
+
+#[doc(hidden)]
+#[proc_macro]
+/// Implements the `Enumerable` trait for tuples with sizes in the given range.
+pub fn __impl_enumerable_for_tuples(input: TokenStream1) -> TokenStream1 {
+    let params = syn::parse_macro_input!(input as tuples::ImplEnumerableForTupleParams);
+    tuples::impl_enumerable_for_tuples(params)
+        .unwrap_or_else(|e| e)
+        .into()
 }
