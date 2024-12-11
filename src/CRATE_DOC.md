@@ -1,7 +1,7 @@
 <!-- markdownlint-disable-next-line MD041 : this markdown file is intended to be included in `lib.rs` -->
 Enumerate all possible values of a type.
 
-[`Enumerable`](trait.Enumerable.html) is a trait used for enumerating all possible values of a type. Calling [`enumerator`](trait.Enumerable.html#tymethod.enumerator) on a `Enumerable` type will return an iterator that yields all possible values of that type.
+[`Enumerable`](trait.Enumerable.html) is a trait used for enumerating all possible values of a type. Calling the [`enumerator`](trait.Enumerable.html#tymethod.enumerator) method of a `Enumerable` type will return an iterator that yields all possible values of that type.
 
 ```rust
 use enumerable::Enumerable;
@@ -38,5 +38,7 @@ for value in <Option<Food> as Enumerable>::enumerator() {
     println!("{:?}", value);
 }
 ```
+
+See the [examples](https://github.com/GeminiLab/enumerable/tree/main/examples) for more examples and a guide on how to use this crate.
 
 See the documentation of [`Enumerable`](trait.Enumerable.html) for more details.
