@@ -149,6 +149,7 @@ fn generate_init_for_fields<'a>(
     )
 }
 
+/// The naming convention for the references to the fields in enumerators for them.
 fn field_ref_naming(field: IdentOrIndex) -> Ident {
     match field {
         IdentOrIndex::Name(field_name) => field_name.clone(),
@@ -156,6 +157,8 @@ fn field_ref_naming(field: IdentOrIndex) -> Ident {
     }
 }
 
+/// The naming convention for the references to the enumerators of the fields in enumerators for
+/// them.
 fn enumerator_ref_naming(field: IdentOrIndex) -> Ident {
     match field {
         IdentOrIndex::Name(field_name) => format_ident!("enumerator_{}", field_name),
@@ -390,7 +393,9 @@ pub fn derive_enumerable(input: TokenStream1) -> TokenStream1 {
     let result = match target {
         Item::Enum(e) => impl_enumerable_for_enum(e),
         Item::Struct(s) => impl_enumerable_for_struct(s),
-        _ => Err(quote_spanned!(target.span() => compile_error!("only enums and structs are supported");).into()),
+        _ => Err(
+            quote_spanned!(target.span() => compile_error!("only enums and structs are supported");),
+        ),
     };
 
     result.unwrap_or_else(|e| e).into()

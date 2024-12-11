@@ -1,7 +1,8 @@
+// This example is an extension of the one in README.md, where we calculate the health score and
+// price of each meal, and then find the healthiest, cheapest, and best value meals.
+
 use enumerable::Enumerable;
 
-// This example demonstrates how to use the `Enumerable` derive macro to enumerate all possible
-// meals that Alice and Bob can eat.
 #[derive(Debug, Copy, Clone, Enumerable, PartialEq, Eq)]
 enum Food {
     Apple,
@@ -16,13 +17,8 @@ impl Food {
         match self {
             Food::Apple => 5.0,
             Food::Banana => 4.0,
-            Food::Coffee { with_milk } => {
-                if *with_milk {
-                    3.0
-                } else {
-                    2.0
-                }
-            }
+            Food::Coffee { with_milk: true } => 3.0,
+            Food::Coffee { with_milk: false } => 2.0,
         }
     }
 
@@ -30,13 +26,8 @@ impl Food {
         match self {
             Food::Apple => 2.0,
             Food::Banana => 1.5,
-            Food::Coffee { with_milk } => {
-                if *with_milk {
-                    1.5
-                } else {
-                    1.0
-                }
-            }
+            Food::Coffee { with_milk: true } => 1.5,
+            Food::Coffee { with_milk: false } => 1.0,
         }
     }
 }
@@ -51,6 +42,7 @@ struct Meal {
 impl Meal {
     fn health_score(&self) -> f64 {
         // we grant 0 for eating nothing
+        //
         // the total health score is the average of the health scores of the two people, with a
         // bonus factor of 1.05 if they eat at home, and an extra bonus factor of 1.2 if they eat
         // different things
@@ -111,9 +103,10 @@ fn main() {
         cheapest_meal.price()
     );
     println!(
-        "The best value meal is: {:?} with score {} and price {}",
+        "The best value meal is: {:?} with score {} and price {}, resulting in a score/price ratio of {}",
         best_value_meal,
         best_value_meal.health_score(),
-        best_value_meal.price()
+        best_value_meal.price(),
+        best_value_meal.health_score() / best_value_meal.price()
     );
 }

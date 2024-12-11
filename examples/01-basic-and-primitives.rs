@@ -1,10 +1,13 @@
 use enumerable::Enumerable;
 
 pub fn main() {
+    // The `Enumerable` trait allows you to enumerate all possible values of a type. It is
+    // implemented for most primitive types, and you can derive it for your own types.
+    //
     // To enumerate all possible values of a type implementing the `Enumerable` trait, call
     // `Enumerator::enumerator()`, which will give you an iterator.
     //
-    // This crate provides implementations for most primitive types, namely
+    // The following primitive types implement `Enumerable`:
     // - i8, i16, i32, i64, i128, isize
     // - u8, u16, u32, u64, u128, usize
     // - char

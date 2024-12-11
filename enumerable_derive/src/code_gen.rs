@@ -3,6 +3,7 @@ use quote::{quote, ToTokens};
 
 use crate::{size_option::SizeOption, targets::Target};
 
+/// The implementation of the `Enumerable` trait for the target type.
 pub struct EnumerableImpl<'a> {
     target: &'a Target,
     size_option: SizeOption,
@@ -11,6 +12,7 @@ pub struct EnumerableImpl<'a> {
 }
 
 impl<'a> EnumerableImpl<'a> {
+    /// Create a new `EnumerableImpl` instance, with the target type and the size option.
     pub fn new(target: &'a Target, size_option: SizeOption) -> Self {
         Self {
             target,
@@ -20,16 +22,20 @@ impl<'a> EnumerableImpl<'a> {
         }
     }
 
+    /// Override the type of the enumerator. The default is provided by the target.
     pub fn override_enumerator_type(mut self, enumerator_type: &'a TokenStream) -> Self {
         self.enumerator_type = Some(enumerator_type);
         self
     }
 
+    /// Override the code snippet that creates the enumerator. The default is
+    /// `<EnumeratorType>::new()`.
     pub fn override_enumerator_creator(mut self, enumerator_creator: &'a TokenStream) -> Self {
         self.enumerator_creator = Some(enumerator_creator);
         self
     }
 
+    /// Generate the implementation of the `Enumerable` trait for the target type.
     pub fn generate(&self) -> TokenStream {
         let enumerable_trait_path = self.target.enumerable_trait_path();
         let impl_generics = self.target.generic_params_full();
@@ -61,10 +67,11 @@ impl<'a> EnumerableImpl<'a> {
 }
 
 /// Generates the implementation of the `Enumerable` trait for the target type.
-pub fn enumerable_impl<'a>(target: &'a Target, size_option: SizeOption) -> EnumerableImpl<'a> {
+pub fn enumerable_impl(target: &Target, size_option: SizeOption) -> EnumerableImpl<'_> {
     EnumerableImpl::new(target, size_option)
 }
 
+/// The keyword used to define the enumerator type.
 pub enum EnumeratorKeyword {
     Struct,
     Enum,
@@ -80,6 +87,7 @@ impl ToTokens for EnumeratorKeyword {
     }
 }
 
+/// Information about an enumerator type.
 pub struct EnumeratorInfo {
     pub keyword: EnumeratorKeyword,
     pub body: TokenStream,
@@ -88,16 +96,20 @@ pub struct EnumeratorInfo {
     pub next_to_yield_fn_body: TokenStream,
 }
 
+/// The implementation of the `Enumerable` trait for the target type, and the definition of its
+/// enumerator type.
 pub struct EnumerableImplWithEnumerator<'a> {
     enumerable_impl: EnumerableImpl<'a>,
     enumerator_info: EnumeratorInfo,
 }
 
-pub fn enumerable_impl_with_enumerator<'a>(
-    target: &'a Target,
+/// Generates the implementation of the `Enumerable` trait for the target type, and the definition
+/// of its enumerator type.
+pub fn enumerable_impl_with_enumerator(
+    target: &Target,
     size_option: SizeOption,
     enumerator_info: EnumeratorInfo,
-) -> EnumerableImplWithEnumerator<'a> {
+) -> EnumerableImplWithEnumerator<'_> {
     EnumerableImplWithEnumerator {
         enumerable_impl: EnumerableImpl::new(target, size_option),
         enumerator_info,
@@ -106,6 +118,7 @@ pub fn enumerable_impl_with_enumerator<'a>(
 
 impl<'a> EnumerableImplWithEnumerator<'a> {
     #[allow(dead_code)]
+    /// Manipulate the `EnumerableImpl` instance.
     pub fn with_enumerable_impl<F: FnOnce(EnumerableImpl<'a>) -> EnumerableImpl<'a>>(
         mut self,
         f: F,
@@ -114,10 +127,13 @@ impl<'a> EnumerableImplWithEnumerator<'a> {
         self
     }
 
+    /// Return the target type.
     pub fn target(&self) -> &Target {
         self.enumerable_impl.target
     }
 
+    /// Generate the implementation of the `Enumerable` trait for the target type, and the
+    /// definition of its enumerator type.
     pub fn generate(&self) -> TokenStream {
         let enumerable_impl = self.enumerable_impl.generate();
 

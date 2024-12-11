@@ -203,12 +203,12 @@ impl Target {
     }
 
     /// Sets the generic parameters of the target type from [`Generics`].
-    pub fn with_generic_params_from_generics<'a>(
+    pub fn with_generic_params_from_generics(
         self,
-        generics: &'a Generics,
+        generics: &Generics,
     ) -> Result<Self, TokenStream> {
         if generics.params.is_empty() {
-            return self.as_ok();
+            return self.into_ok();
         }
 
         if let Some(lifetime) = generics.lifetimes().next() {
@@ -238,7 +238,8 @@ impl Target {
         params_simple.extend(quote!(>));
         params_full.extend(quote!(>));
 
-        self.with_generic_params(params_simple, params_full).as_ok()
+        self.with_generic_params(params_simple, params_full)
+            .into_ok()
     }
 
     /// Sets the where clause of the target type.
@@ -281,7 +282,7 @@ impl Target {
     }
 
     /// Converts the current [`Target`] into a [`Result`] with the current [`Target`] as the `Ok` variant.
-    pub fn as_ok<T>(self) -> Result<Self, T> {
+    pub fn into_ok<T>(self) -> Result<Self, T> {
         Ok(self)
     }
 }

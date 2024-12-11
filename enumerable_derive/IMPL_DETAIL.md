@@ -1,6 +1,6 @@
 # The details hidden behind the `#[derive(Enumerable)]` macro
 
-The built-in implementations of the `Enumerable` trait are quite simple. For numeric types, just use `RangeInclusive`s. For `()`, `std::iter::once(())` is enough. For `bool`, why not create a const array `[false, true]` and return an iterator of it every time? The standard library has already done a great job for us, and there's no need to create new enumerator types for them.
+The built-in implementations of the `Enumerable` trait are quite simple. For numeric types, just use `RangeInclusive`s. For `()`, `std::iter::once(())` is enough. For `bool`, why not create a const array `[false, true]` and return an copied iterator of it every time? The standard library has already done a great job for us, and there's no need to create new enumerator types for them.
 
 But implementing `Enumerable` for structs and enums is not that straightforward. There are new types to create, new methods to implement, and many edge cases to consider. Here are some details about how the `Enumerable` trait should be implemented for structs and enums and how `#[derive(Enumerable)]` macro works.
 
@@ -170,7 +170,7 @@ impl Iterator for ExampleEnumerator {
 
 The code above is a little bit long and complex, but it's not that hard to understand with the help of the comments.
 
-The key point here is that, the order of "move to the next state" and "yield the value" is rearranged. When a normal generator is called, it first move the itself to the next state, then yield a value based on the that state. But in this implementation, the generator "pre-moves" itself to the next state, then yield the value based on the previous state, which is evaluated during the previous call (or the initialization, for the first value) and stored in the `next` field. If the generator has finished, the `next` field will be `None`.
+The key point here is that, the order of "move to the next state" and "yield the value" is rearranged. When a normal generator is called, it first move the itself to the next state, then yield a value based on that state. But in this implementation, the generator "pre-moves" itself to the next state, then yield the value based on the previous state, which is evaluated during the previous call (or the initialization, for the first value) and stored in the `next` field. If the generator has finished, the `next` field will be `None`.
 
 The advantage of this approach is that the state of "not started yet" can be skipped, and the state of "finished" can be determined by checking the `next` field (which, in fact, does not need to be checked explicitly). As a result, the state of the generator is not necessary to be stored explicitly.
 
@@ -187,11 +187,7 @@ impl Enumerable for Example {
     }
 
     const ENUMERABLE_SIZE_OPTION: Option<usize> = {
-        let size = Some(1usize);
-        let size = match (size, <u8 as Enumerable>::ENUMERABLE_SIZE_OPTION) {
-            (Some(size), Some(other_size)) => size.checked_mul(other_size),
-            _ => None,
-        };
+        let size = <u8 as Enumerable>::ENUMERABLE_SIZE_OPTION;
         let size = match (size, <bool as Enumerable>::ENUMERABLE_SIZE_OPTION) {
             (Some(size), Some(other_size)) => size.checked_mul(other_size),
             _ => None,
@@ -209,7 +205,7 @@ There is one more thing to mention: if the struct is an `EmptyStruct` with no fi
 
 ## How to implement `Enumerable` on enums?
 
-An enum is a "sum type", its values are constructed by choosing one of its variants and then constructing the value based on the fields of the chosen variant. Therefore, the set of all possible values of an enum is the **union** of all possible values of its variants. So, to enumerate all possible values of an enum, we need to enumerate **all possible values of each variant** and yield them in order.
+An enum is a "sum type", its values are constructed by choosing one of its variants and then choosing the values of the fields of the chosen variant. Therefore, the set of all possible values of an enum is the **union** of all possible values of its variants. So, to enumerate all possible values of an enum, we need to enumerate **all possible values of each variant** and yield them in order.
 
 Unlike structs, where we start directly with general cases, let's take a look at some simpler enums first. For example, if an enum has no fields at all, like:
 
@@ -348,7 +344,7 @@ impl ComplexEnumEnumerator {
         loop {
             match self {
                 // The Before<Variant> states. It does almost the same thing as
-                // the `new` methods of the generators for structs:
+                // the `new` methods of the enumerators for structs:
                 // - create the enumerators of all fields,
                 // - try to move to the state at the first `yield` statement in
                 //   this variant, and
@@ -373,7 +369,7 @@ impl ComplexEnumEnumerator {
                     }
                 }
                 // The In<Variant> states. It does almost the same thing as the
-                // `step` methods of the generators for structs:
+                // `step` methods of the enumerators for structs:
                 // - try to move to the next state, and
                 // - if failed, move to the next variant.
                 ComplexEnumEnumerator::InVariant1 {
@@ -519,6 +515,7 @@ Whew! It's really long, right? But the overall structure is still the same as th
 
 - There are more states, and states are stored explicitly.
 - The `step` method is more complex. It looks like a concatenation of the `step` and `new` methods of the generators for fields of the variants, with some extra logic for state transitions.
+  - `Before<Variant>` states are used to avoid the possible duplication of the initialization code. Without them, the `In<Variant1>` state will have to check if `Variant2`, `Variant3`, and `Variant4` have possible values, which is unnecessary.
 - The `next_to_yield` method is added to extract the value to yield from the state.
 
 As we have the enum enumerator, the implementation of `Enumerable` for the enum is straightforward. The `ENUMERABLE_SIZE_OPTION` is calculated by summing the sizes of all variants.
@@ -532,19 +529,19 @@ impl Enumerable for ComplexEnum {
     }
 
     const ENUMERABLE_SIZE_OPTION: Option<usize> = {
-        let size: Option<usize> = Some(0usize);
-        let size: Option<usize> = match (size, <u8 as Enumerable>::ENUMERABLE_SIZE_OPTION) {
-            (Some(size), Some(size_field)) => size.checked_add(size_field),
-            _ => None,
-        };
+        // first variant
+        let size: Option<usize> = <u8 as Enumerable>::ENUMERABLE_SIZE_OPTION;
+        // second variant
         let size: Option<usize> = match (size, Some(1usize)) {
             (Some(size), Some(size_field)) => size.checked_add(size_field),
             _ => None,
         };
+        // third variant
         let size: Option<usize> = match (size, <UninhabitedEnum as Enumerable>::ENUMERABLE_SIZE_OPTION) {
             (Some(size), Some(size_field)) => size.checked_add(size_field),
             _ => None,
         };
+        // fourth variant
         let size: Option<usize> = match (
             size,
             {
@@ -569,6 +566,8 @@ impl Enumerable for ComplexEnum {
     };
 }
 ```
+
+That's all for enums. The implementation of `Enumerable` for enums is more complex than for structs, but the overall structure is still the same.
 
 ## How to deal with generic parameters?
 
@@ -604,6 +603,10 @@ pub struct ExampleGenericEnumerator<
     A: Enumerable,
     bool: Enumerable,
     Result<B, C>: Enumerable,
+    // ⬇️ where clause for the generic parameters
+    A: Copy,
+    B: Copy,
+    C: Copy,
 {
     field1_enumerator: <A as Enumerable>::Enumerator,
     field2_enumerator: <bool as Enumerable>::Enumerator,
@@ -627,6 +630,9 @@ where
     A: Enumerable,
     bool: Enumerable,
     Result<B, C>: Enumerable, 
+    A: Copy,
+    B: Copy,
+    C: Copy,
 {
     // methods here are unchanged
 }
@@ -635,3 +641,16 @@ where
 // `impl<...> Iterator for ExampleGenericEnumerator<...> where ...` and
 // `impl<...> Enumerable for ExampleGeneric<...> where ...`.
 ```
+
+The modifications of generics are:
+
+- The defaults of generic parameters are removed. It's easy to understand: the default values are not necessary for enumerators, the implementation of `Enumerable` for the target type will always use the full parameter list.
+- An extra bound `F: Enumerable` is added to the `where` clause for each field type `F`. It will give users a more friendly error message when the field type does not implement `Enumerable`.
+- An extra bound `T: Copy` is added to the `where` clause for each generic parameter `T`. It may be the hardest part to understand. The reason is that `#[derive(Copy)]` on a struct or enum with generic parameters will have a `T: Copy` bound on each generic parameter `T`, even if `T` is irrelevant to `Copy`. For example,
+
+  ```rust
+  #[derive(Clone, Copy)]
+  struct Example<T>(pub core::marker::PhantomData<T>);
+  ```
+  
+  even the only field, `PhantomData`, is `Copy` regardless of `T`, `Example<T>` is `Copy` if and only if `T` is `Copy`. Therefore, we need to add the `T: Copy` bound to the enumerator to make the implementation of `Enumerable` consistent with the implementation of `Copy`, as `Copy` is a supertrait of `Enumerable`.
