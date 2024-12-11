@@ -32,6 +32,7 @@ impl SizeOption {
         }
     }
 
+    /// Creates a new `SizeOption` from a `usize` literal.
     pub fn from_usize(size: usize) -> Self {
         let size_lit = LitInt::new(&format!("{}usize", size), Span::call_site());
 

@@ -26,12 +26,14 @@ pub struct FieldToEnumerate {
     pub enumerator_ref: Ident,
 }
 
+/// A list of fields that need to be enumerated.
 pub struct FieldsToEnumerate {
     pub fields: Vec<FieldToEnumerate>,
     pub binder: TokenStream,
 }
 
 impl FieldsToEnumerate {
+    /// Create a new `FieldsToEnumerate` from a [`Fields`] instance.
     pub fn from_fields(
         fields: &Fields,
         mut field_ref_naming: impl FnMut(IdentOrIndex) -> Ident,
@@ -67,6 +69,11 @@ impl FieldsToEnumerate {
         }
     }
 
+    /// Create a new `FieldsToEnumerate` from a list of unnamed fields constructed manually.
+    ///
+    /// The fields are provided as an iterator of tuples, where the first element is the field's
+    /// reference, the second element is the field's type, and the third element is the enumerator's
+    /// reference.
     pub fn new_unnamed(fields: impl Iterator<Item = (String, TokenStream, String)>) -> Self {
         let fields_to_enumerate: Vec<_> = fields
             .map(|(field_ref, field_type, enumerator_ref)| FieldToEnumerate {
@@ -86,18 +93,22 @@ impl FieldsToEnumerate {
         }
     }
 
+    /// Return an iterator over the fields that need to be enumerated.
     pub fn fields_iter(&self) -> impl Iterator<Item = &FieldToEnumerate> {
         self.fields.iter()
     }
 
+    /// Return an iterator over the field references.
     pub fn field_refs(&self) -> impl Iterator<Item = &Ident> {
         self.fields.iter().map(|field| &field.field_ref)
     }
 
+    /// Return an iterator over the field types.
     pub fn field_types(&self) -> impl Iterator<Item = &TokenStream> {
         self.fields.iter().map(|field| &field.field_type)
     }
 
+    /// Return an iterator over the enumerator references.
     pub fn enumerator_refs(&self) -> impl Iterator<Item = &Ident> {
         self.fields.iter().map(|field| &field.enumerator_ref)
     }

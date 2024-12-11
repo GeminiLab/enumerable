@@ -149,6 +149,7 @@ fn generate_init_for_fields<'a>(
     )
 }
 
+/// The naming convention for the references to the fields in enumerators for them.
 fn field_ref_naming(field: IdentOrIndex) -> Ident {
     match field {
         IdentOrIndex::Name(field_name) => field_name.clone(),
@@ -156,6 +157,8 @@ fn field_ref_naming(field: IdentOrIndex) -> Ident {
     }
 }
 
+/// The naming convention for the references to the enumerators of the fields in enumerators for
+/// them.
 fn enumerator_ref_naming(field: IdentOrIndex) -> Ident {
     match field {
         IdentOrIndex::Name(field_name) => format_ident!("enumerator_{}", field_name),
