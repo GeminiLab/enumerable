@@ -74,7 +74,7 @@ impl SizeOption {
             }
             None => {
                 // there is only one size
-                return size_first;
+                size_first
             }
         }
     }
@@ -113,7 +113,7 @@ impl SizeOption {
             }
             None => {
                 // there is only one size
-                return size_first;
+                size_first
             }
         }
     }

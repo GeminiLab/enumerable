@@ -61,7 +61,7 @@ impl<'a> EnumerableImpl<'a> {
 }
 
 /// Generates the implementation of the `Enumerable` trait for the target type.
-pub fn enumerable_impl<'a>(target: &'a Target, size_option: SizeOption) -> EnumerableImpl<'a> {
+pub fn enumerable_impl(target: &Target, size_option: SizeOption) -> EnumerableImpl<'_> {
     EnumerableImpl::new(target, size_option)
 }
 
@@ -93,11 +93,11 @@ pub struct EnumerableImplWithEnumerator<'a> {
     enumerator_info: EnumeratorInfo,
 }
 
-pub fn enumerable_impl_with_enumerator<'a>(
-    target: &'a Target,
+pub fn enumerable_impl_with_enumerator(
+    target: &Target,
     size_option: SizeOption,
     enumerator_info: EnumeratorInfo,
-) -> EnumerableImplWithEnumerator<'a> {
+) -> EnumerableImplWithEnumerator<'_> {
     EnumerableImplWithEnumerator {
         enumerable_impl: EnumerableImpl::new(target, size_option),
         enumerator_info,

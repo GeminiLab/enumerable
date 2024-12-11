@@ -5,12 +5,12 @@
 /// ## Methods, Associated Types, and Associated Constants
 ///
 /// - `fn enumerator() -> Self::Enumerator`: Returns an iterator over all possible values of the
-/// implementing type.
+///   implementing type.
 /// - `type Enumerator`: The type of the iterator that will be returned by the `enumerator` method.
 /// - `const ENUMERABLE_SIZE_OPTION: Option<usize>`: The number of elements returned by
-/// `enumerator()`.
+///   `enumerator()`.
 /// - `const ENUMERABLE_SIZE: usize` (provided): Unwrapped version of `ENUMERABLE_SIZE_OPTION`,
-/// panics at compile time if the number of elements exceeds `usize::MAX`.
+///   panics at compile time if the number of elements exceeds `usize::MAX`.
 ///
 /// ## Built-in Implementations
 ///
@@ -19,12 +19,12 @@
 /// - Numeric types: Yields all possible values of the type from the minimum to the maximum one.
 /// - [`Option`]: Yields `None` and then `Some(item)` for each possible value of `T`.
 /// - [`Result`]: Yields `Ok(item)` for each possible value of `T` and then `Err(error)` for each
-/// possible value of `E`.
+///   possible value of `E`.
 /// - `char`: Yields all possible Unicode scalar values, i.e. all code points ranging from `U+0000`
-/// to `U+10FFFF`, excluding the surrogate code points (`U+D800` to `U+DFFF`), from the lowest to
-/// the highest one.
+///   to `U+10FFFF`, excluding the surrogate code points (`U+D800` to `U+DFFF`), from the lowest to
+///   the highest one.
 /// - Tuples: Yields all possible values of the tuple with 1 to 16 elements, in a lexicographic
-/// ordering (as [`core::cmp::Ord`] does), provided that all elements implement `Enumerable`.
+///   ordering (as [`core::cmp::Ord`] does), provided that all elements implement `Enumerable`.
 /// - `()`: Yields the unit value `()`.
 ///
 /// ## Derivable
@@ -58,28 +58,28 @@
 ///
 /// It is guaranteed that:
 /// - The derived implementations will enumerate over all possible variants of an enum in the order
-/// they are declared. The only exception is variants with fields of uninhabited types (e.g. empty
-/// enums), which will be skipped.
+///   they are declared. The only exception is variants with fields of uninhabited types (e.g. empty
+///   enums), which will be skipped.
 /// - The derived implementations will yield all possible values of a struct (or a variant with some
-/// fields of an enum) in a lexicographic ordering based on the top-to-bottom declaration order of
-/// the fields, as built-in implementations for tuples do.
+///   fields of an enum) in a lexicographic ordering based on the top-to-bottom declaration order of
+///   the fields, as built-in implementations for tuples do.
 ///
 /// It is **NOT** guaranteed that:
 /// - The derived and the built-in implementations will return a specific type of [`Iterator`] as
-/// enumerators.
+///   enumerators.
 ///
 ///   Do **NOT** rely on the specific type of the enumerator provided by an `Enumerable` type,
-/// unless you are using `#[enumerator(...)]` and knowing that `#[derive(Enumerable)]` will generate
-/// an enumerator type, use `<T as Enumerable>::Enumerator` instead in all other cases.
+///   unless you are using `#[enumerator(...)]` and knowing that `#[derive(Enumerable)]` will
+///   generate an enumerator type, use `<T as Enumerable>::Enumerator` instead in all other cases.
 ///
 /// It is **REQUIRED** that if you are implementing `Enumerable` for a type manually, your
 /// enumerator should:
-/// - have a idempotent `enumerator()` method, i.e. calling it multiple times should return iterators
-/// that yield the same values in the same order.
+/// - have a idempotent `enumerator()` method, i.e. calling it multiple times should return 
+///   iterators that yield the same values in the same order.
 /// - have a `ENUMERABLE_SIZE_OPTION` constant that matches the number of elements returned by
-/// `enumerator()`.
+///   `enumerator()`.
 /// - use the default version of `ENUMERABLE_SIZE`, or provide a custom one that matches
-/// `ENUMERABLE_SIZE_OPTION`.
+///   `ENUMERABLE_SIZE_OPTION`.
 ///
 /// Failed to meet the requirements will result in unexpected behavior when interacting with the
 /// derived implementations.
