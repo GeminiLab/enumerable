@@ -1,4 +1,4 @@
-#![doc = include_str!("../IMPL_DETAIL.md")]
+#![doc = include_str!("./IMPL_DETAIL.md")]
 
 use proc_macro::TokenStream as TokenStream1;
 use proc_macro2::{Ident, TokenStream};

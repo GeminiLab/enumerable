@@ -6,7 +6,7 @@ exclude = ["examples"]
 authors = [ "aarkegz <aarkegz@gmail.com>" ]
 license = "MIT"
 edition = "2021"
-version = "1.1.0-dev"
+version = "1.1.0"
 repository = "https://github.com/GeminiLab/enumerable/"
 include = [
     "README.md",
@@ -33,4 +33,4 @@ std = ["enumerable_derive/std"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-enumerable_derive = { path = "enumerable_derive", version = "=1.1.0-dev" }
+enumerable_derive = { path = "enumerable_derive", version = "=1.1.0" }
