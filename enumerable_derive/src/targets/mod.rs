@@ -261,6 +261,14 @@ impl Target {
             where_clause_for_fields.extend(quote!(#ty: #enumerable_trait_path,));
         }
 
+        // Add an extra bound `T: ::core::marker::Copy` for each generic parameter `T`.
+        //
+        // See here for more information: https://github.com/GeminiLab/enumerable/issues/51.
+        for param in generics.type_params() {
+            let ident = &param.ident;
+            where_clause_for_fields.extend(quote!(#ident: ::core::marker::Copy,));
+        }
+
         let where_clause = match &generics.where_clause {
             Some(wc) => {
                 let predicates = wc.predicates.iter();
