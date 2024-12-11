@@ -390,7 +390,9 @@ pub fn derive_enumerable(input: TokenStream1) -> TokenStream1 {
     let result = match target {
         Item::Enum(e) => impl_enumerable_for_enum(e),
         Item::Struct(s) => impl_enumerable_for_struct(s),
-        _ => Err(quote_spanned!(target.span() => compile_error!("only enums and structs are supported");)),
+        _ => Err(
+            quote_spanned!(target.span() => compile_error!("only enums and structs are supported");),
+        ),
     };
 
     result.unwrap_or_else(|e| e).into()

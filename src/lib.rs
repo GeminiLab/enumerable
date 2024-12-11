@@ -2,15 +2,17 @@
 
 /// `Enumerable` is a trait for types that can have their possible values enumerated.
 ///
-/// ## Methods, Associated Types, and Associated Constants
+/// ## Overview
 ///
-/// - `fn enumerator() -> Self::Enumerator`: Returns an iterator over all possible values of the
-///   implementing type.
-/// - `type Enumerator`: The type of the iterator that will be returned by the `enumerator` method.
-/// - `const ENUMERABLE_SIZE_OPTION: Option<usize>`: The number of elements returned by
-///   `enumerator()`.
-/// - `const ENUMERABLE_SIZE: usize` (provided): Unwrapped version of `ENUMERABLE_SIZE_OPTION`,
-///   panics at compile time if the number of elements exceeds `usize::MAX`.
+/// To enumerate all possible values of a `Enumerable` type, call the
+/// [`enumerator`](Enumerable::enumerator) method, which returns an iterator of type
+/// [`Self::Enumerator`](Enumerable::Enumerator).
+///
+/// It's also possible to get the number of possible values of a `Enumerable` type constantly by
+/// accessing the [`ENUMERABLE_SIZE`](Enumerable::ENUMERABLE_SIZE) constant. If the number of
+/// possible values exceeds `usize::MAX`, the constant will panic at compile time. To avoid this,
+/// use [`ENUMERABLE_SIZE_OPTION`](Enumerable::ENUMERABLE_SIZE_OPTION) instead. It's
+/// `Some(ENUMERABLE_SIZE)` if it does not exceed `usize::MAX`, `None` otherwise.
 ///
 /// ## Built-in Implementations
 ///
@@ -33,15 +35,17 @@
 /// - they have no fields, or
 /// - all of their fields implement `Enumerable`.
 ///
-/// Types with generic parameters are not supported yet.
+/// If the type has generic parameters, they must also meet the following requirements:
+/// - there are only type parameters, i.e. no lifetime or const parameters, and
+/// - all type parameters implement [`Copy`].
 ///
 /// See "Guarantees and Limitations" below for more information.
 ///
 /// ### Customizing the Generated Enumerator
 ///
 /// In most cases, `#[derive(Enumerable)]` will generate a new enumerator type named
-/// `<Type>Enumerator` that enumerates all possible values of the type to be derived `<Type>`. It's
-/// possible to customize the name of the generated type by using
+/// `<Type>Enumerator` in the same module, with the same visibility and generic parameters as the
+/// type to be derived `<Type>`. It's possible to customize the name of the generated type by using
 /// - `#[enumerator = "DesiredEnumeratorName"]`, or
 /// - `#[enumerator(DesiredEnumeratorName)]`,
 ///
@@ -58,8 +62,8 @@
 ///
 /// It is guaranteed that:
 /// - The derived implementations will enumerate over all possible variants of an enum in the order
-///   they are declared. The only exception is variants with fields of uninhabited types (e.g. empty
-///   enums), which will be skipped.
+///   they are declared. Variants with fields of uninhabited types (e.g. empty enums) will be
+///   skipped.
 /// - The derived implementations will yield all possible values of a struct (or a variant with some
 ///   fields of an enum) in a lexicographic ordering based on the top-to-bottom declaration order of
 ///   the fields, as built-in implementations for tuples do.
@@ -74,8 +78,9 @@
 ///
 /// It is **REQUIRED** that if you are implementing `Enumerable` for a type manually, your
 /// enumerator should:
-/// - have a idempotent `enumerator()` method, i.e. calling it multiple times should return 
-///   iterators that yield the same values in the same order.
+/// - have a idempotent `enumerator()` method, i.e. calling it multiple times should return
+///   iterators that yield the same values in the same order. Multiple calls to `enumerator()`
+///   should not affect each other.
 /// - have a `ENUMERABLE_SIZE_OPTION` constant that matches the number of elements returned by
 ///   `enumerator()`.
 /// - use the default version of `ENUMERABLE_SIZE`, or provide a custom one that matches

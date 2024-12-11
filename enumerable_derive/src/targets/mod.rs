@@ -238,7 +238,8 @@ impl Target {
         params_simple.extend(quote!(>));
         params_full.extend(quote!(>));
 
-        self.with_generic_params(params_simple, params_full).into_ok()
+        self.with_generic_params(params_simple, params_full)
+            .into_ok()
     }
 
     /// Sets the where clause of the target type.

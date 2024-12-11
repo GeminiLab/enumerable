@@ -72,8 +72,7 @@ impl Enumerable for char {
         ('\u{0}'..='\u{D7FF}').chain('\u{E000}'..='\u{10FFFF}')
     }
 
-    const ENUMERABLE_SIZE_OPTION: Option<usize> =
-        Some((0xD7FF + 1) + (0x10FFFF - 0xE000 + 1));
+    const ENUMERABLE_SIZE_OPTION: Option<usize> = Some((0xD7FF + 1) + (0x10FFFF - 0xE000 + 1));
 }
 
 /// `OptionEnumerator` is an iterator over possible values of `Option<T>`.

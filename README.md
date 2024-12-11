@@ -56,4 +56,3 @@ Meal { alice_eats: Apple, bob_eats: Some(Coffee { with_milk: true }), at_home: t
 Meal { alice_eats: Banana, bob_eats: None, at_home: false }
 ...
 ```
-
