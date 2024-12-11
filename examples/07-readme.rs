@@ -1,3 +1,5 @@
+// This file contains the example from the README.md file.
+
 use enumerable::Enumerable;
 
 #[derive(Debug, Copy, Clone, Enumerable)]

@@ -48,7 +48,7 @@ impl Enumerable for bool {
     fn enumerator() -> Self::Enumerator {
         const ALL_VARIANTS: &[bool; 2] = &[false, true];
 
-        return ALL_VARIANTS.iter().copied();
+        ALL_VARIANTS.iter().copied()
     }
 
     const ENUMERABLE_SIZE_OPTION: Option<usize> = Some(2);
@@ -72,8 +72,7 @@ impl Enumerable for char {
         ('\u{0}'..='\u{D7FF}').chain('\u{E000}'..='\u{10FFFF}')
     }
 
-    const ENUMERABLE_SIZE_OPTION: Option<usize> =
-        Some((0xD7FF - 0x0 + 1) + (0x10FFFF - 0xE000 + 1));
+    const ENUMERABLE_SIZE_OPTION: Option<usize> = Some((0xD7FF + 1) + (0x10FFFF - 0xE000 + 1));
 }
 
 /// `OptionEnumerator` is an iterator over possible values of `Option<T>`.
@@ -109,10 +108,7 @@ where
             self.first = false;
             Some(None)
         } else {
-            match self.inner.next() {
-                Some(item) => Some(Some(item)),
-                None => None,
-            }
+            self.inner.next().map(Some)
         }
     }
 }
