@@ -11,6 +11,7 @@ jobs:
       - run: cargo test --all-features
       - run: ./examples/run_examples.sh
       - run: ./examples/example_crates/run_example_crates.sh
+
   rustfmt-check:
     name: rustfmt check
     runs-on: ubuntu-latest
