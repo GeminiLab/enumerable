@@ -111,6 +111,20 @@ where
             self.inner.next().map(Some)
         }
     }
+
+    /// Returns the lower and upper bound of the iterator.
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let (lower, upper) = self.inner.size_hint();
+
+        if self.first {
+            (
+                lower.saturating_add(1),
+                upper.and_then(|u| u.checked_add(1)),
+            )
+        } else {
+            (lower, upper)
+        }
+    }
 }
 
 /// This is an implementation of the `Enumerable` trait for `Option<T>` where `T` is `Enumerable`.
