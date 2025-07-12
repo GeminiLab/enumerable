@@ -1,6 +1,6 @@
 //! This example tests the `Enumerable` derive macro in a `no_std` environment.
-
-#![no_std]
+//! 
+//! This example itself is not `no_std`, but it uses the `enumerable` crate with `default-features = false`.
 
 use enumerable::Enumerable;
 
