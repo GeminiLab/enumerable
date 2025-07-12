@@ -1,3 +1,4 @@
+#![cfg_attr(not(feature = "std"), no_std)]
 #![doc = include_str!("./CRATE_DOC.md")]
 
 /// `Enumerable` is a trait for types that can have their possible values enumerated.
