@@ -12,8 +12,8 @@ jobs:
       - run: ./examples/run_examples.sh
       - run: ./examples/example_crates/run_example_crates.sh
 
-  multi_targets_build:
-    name: multi-targets build
+  multi-targets-no-std:
+    name: multi-targets no_std
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -29,7 +29,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
-      - run: cargo build --target ${{ matrix.target }} --all-features
+          components: rustc, cargo
+      - run: cargo build --target ${{ matrix.target }} --no-default-features
 
   rustfmt-check:
     name: rustfmt check
