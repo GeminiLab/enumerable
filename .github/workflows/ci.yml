@@ -12,6 +12,17 @@ jobs:
       - run: ./examples/run_examples.sh
       - run: ./examples/example_crates/run_example_crates.sh
 
+  multi_targets_build:
+    name: multi-targets build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [x86_64-unknown-linux-gnu, aarch64-unknown-linux-gnu, x86_64-unknown-none, aarch64-unknown-none-softfloat]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo build --target ${{ matrix.target }} --all-features
+
   rustfmt-check:
     name: rustfmt check
     runs-on: ubuntu-latest
