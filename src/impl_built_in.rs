@@ -113,7 +113,7 @@ where
     }
 
     /// Implements the standard library's `Iterator::size_hint` method.
-    /// 
+    ///
     /// This method returns the lower and upper bound of the iterator. For `OptionEnumerator`,
     /// the bounds are adjusted to account for the `None` variant:
     /// - If `self.first` is `true`, the lower bound is incremented by 1, and the upper bound
