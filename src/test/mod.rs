@@ -16,7 +16,7 @@ mod primitive {
 
     #[test]
     fn test_option_bool() {
-        assert_enumerator_eq(vec![None, Some(false), Some(true)]);
+        assert_enumerator_eq_with_size_hint(vec![None, Some(false), Some(true)]);
     }
 
     #[test]
