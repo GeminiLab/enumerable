@@ -291,12 +291,12 @@ impl Target {
 #[allow(dead_code)]
 impl Target {
     /// Gets the target type name. Generics are not included.
-    pub fn target_type_name(&self) -> TokenStreamRefs {
+    pub fn target_type_name(&self) -> TokenStreamRefs<'_> {
         (&self.target_type_name).into()
     }
 
     /// Gets the target type, with generics included but bounds and defaults stripped.
-    pub fn target_type(&self) -> TokenStreamRefs {
+    pub fn target_type(&self) -> TokenStreamRefs<'_> {
         self.target_type
             .as_ref()
             .map(Into::into)
@@ -307,7 +307,7 @@ impl Target {
     }
 
     /// Gets the target type, with generics and bounds included but defaults stripped.
-    pub fn target_type_bounded(&self) -> TokenStreamRefs {
+    pub fn target_type_bounded(&self) -> TokenStreamRefs<'_> {
         self.target_type_with_bound
             .as_ref()
             .map(Into::into)
@@ -327,12 +327,12 @@ impl Target {
     }
 
     /// Gets the type of the enumerator to be generated for the current target type.
-    pub fn enumerator_type_name(&self) -> TokenStreamRefs {
+    pub fn enumerator_type_name(&self) -> TokenStreamRefs<'_> {
         (&self.enumerator_type_name).into()
     }
 
     /// Gets the type of the enumerator, with generics included but bounds and defaults stripped.
-    pub fn enumerator_type(&self) -> TokenStreamRefs {
+    pub fn enumerator_type(&self) -> TokenStreamRefs<'_> {
         self.enumerator_type
             .as_ref()
             .map(Into::into)
@@ -343,7 +343,7 @@ impl Target {
     }
 
     /// Gets the type of the enumerator, with generics and bounds included but defaults stripped.
-    pub fn enumerator_type_bounded(&self) -> TokenStreamRefs {
+    pub fn enumerator_type_bounded(&self) -> TokenStreamRefs<'_> {
         self.enumerator_type_with_bound
             .as_ref()
             .map(Into::into)
@@ -354,22 +354,22 @@ impl Target {
     }
 
     /// Gets the generic parameters of the target type, with bounds and defaults stripped.
-    pub fn generic_params_simple(&self) -> TokenStreamRefs {
+    pub fn generic_params_simple(&self) -> TokenStreamRefs<'_> {
         self.generic_params_simple.as_ref().into()
     }
 
     /// Gets the generic parameters of the target type, with bounds retained and defaults stripped.
-    pub fn generic_params_full(&self) -> TokenStreamRefs {
+    pub fn generic_params_full(&self) -> TokenStreamRefs<'_> {
         self.generic_params_full.as_ref().into()
     }
 
     /// Gets the where clause of the target type, with extra bounds `F: Enumerable` for each field type.
-    pub fn where_clause(&self) -> TokenStreamRefs {
+    pub fn where_clause(&self) -> TokenStreamRefs<'_> {
         self.where_clause.as_ref().into()
     }
 
     /// Gets the path to the `Enumerable` trait. If the `enumerable` crate is not found, it emits a compile error.
-    pub fn enumerable_trait_path(&self) -> TokenStreamRefs {
+    pub fn enumerable_trait_path(&self) -> TokenStreamRefs<'_> {
         (&self.enumerable_trait_path).into()
     }
 }

@@ -11,7 +11,7 @@ pub enum IdentOrIndex<'a> {
 }
 
 /// Returns the name of a field or its index if it's from a list of unnamed fields.
-fn field_name_or_index(index: usize, field: &Field) -> IdentOrIndex {
+fn field_name_or_index(index: usize, field: &Field) -> IdentOrIndex<'_> {
     field
         .ident
         .as_ref()
